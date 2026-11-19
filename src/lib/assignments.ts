@@ -38,7 +38,7 @@ export async function assignCourse(ctx: AssignmentWriter, input: CreateAssignmen
     throw new AssignmentError("Course not found");
   }
   if (course.status !== "active") {
-    throw new AssignmentError("That course is archived");
+    throw new AssignmentError("That course is inactive");
   }
 
   const staffIds = [...new Set(parsed.staffIds)];
@@ -75,6 +75,75 @@ export async function assignCourse(ctx: AssignmentWriter, input: CreateAssignmen
     throw new AssignmentError("Some staff could not be assigned");
   }
   return people.length;
+}
+
+/** Update one assignment. Moving it to another person uses $pull and $push, not a replaced array. */
+export async function updateAssignment(
+  models: TenantContext["models"],
+  assignmentId: string,
+  input: { staffId: string; courseId: string; dueDate: Date | null; status: AssignmentStatus },
+): Promise<{ staffId: string; previousStaffId: string; courseId: string; previousCourseId: string }> {
+  const person = await models.Staff.findOne({ "assignments.assignmentId": assignmentId }).lean();
+  const assignment = person?.assignments.find((item) => item.assignmentId === assignmentId);
+  if (!person || !assignment) {
+    throw new AssignmentError("Assignment not found");
+  }
+
+  const course = await models.Course.findById(input.courseId).select("_id").lean();
+  if (!course) throw new AssignmentError("Course not found");
+  const target = await models.Staff.findById(input.staffId).select("_id").lean();
+  if (!target) throw new AssignmentError("Staff not found");
+
+  const previousStaffId = String(person._id);
+  const previousCourseId = String(assignment.courseId);
+  const completedAt = input.status === "completed" ? (assignment.completedAt ?? new Date()) : null;
+
+  if (previousStaffId === input.staffId) {
+    const set: Record<string, unknown> = {
+      "assignments.$[item].courseId": input.courseId,
+      "assignments.$[item].status": input.status,
+    };
+    const unset: Record<string, ""> = {};
+    if (input.dueDate) set["assignments.$[item].dueDate"] = input.dueDate;
+    else unset["assignments.$[item].dueDate"] = "";
+    if (completedAt) set["assignments.$[item].completedAt"] = completedAt;
+    else unset["assignments.$[item].completedAt"] = "";
+
+    const updated = await models.Staff.updateOne(
+      { _id: person._id },
+      { $set: set, ...(Object.keys(unset).length > 0 ? { $unset: unset } : {}) },
+      { arrayFilters: [{ "item.assignmentId": assignmentId }] },
+    );
+    if (updated.matchedCount !== 1) throw new AssignmentError("Assignment not found");
+  } else {
+    const next = {
+      assignmentId: assignment.assignmentId,
+      courseId: input.courseId,
+      assignedAt: assignment.assignedAt,
+      assignedBy: assignment.assignedBy,
+      status: input.status,
+      progress: assignment.progress,
+      ...(input.dueDate ? { dueDate: input.dueDate } : {}),
+      ...(completedAt ? { completedAt } : {}),
+    };
+    const pushed = await models.Staff.updateOne(
+      { _id: input.staffId, "assignments.assignmentId": { $ne: assignmentId } },
+      { $push: { assignments: next } },
+    );
+    if (pushed.matchedCount === 0) {
+      throw new AssignmentError("That person already has this assignment");
+    }
+    const pulled = await models.Staff.updateOne(
+      { _id: person._id },
+      { $pull: { assignments: { assignmentId } } },
+    );
+    if (pulled.modifiedCount !== 1) {
+      await models.Staff.updateOne({ _id: input.staffId }, { $pull: { assignments: { assignmentId } } });
+      throw new AssignmentError("Assignment could not be moved");
+    }
+  }
+
+  return { staffId: input.staffId, previousStaffId, courseId: input.courseId, previousCourseId };
 }
 
 export async function listAssignments(

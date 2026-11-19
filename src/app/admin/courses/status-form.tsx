@@ -24,7 +24,7 @@ export function CourseStatusForm({
       <input type="hidden" name="courseId" value={courseId} />
       <input type="hidden" name="status" value={nextStatus} />
       <Button type="submit" size="sm" variant={nextStatus === "archived" ? "destructive" : "outline"} disabled={pending}>
-        {pending ? "Saving…" : nextStatus === "archived" ? "Archive" : "Restore"}
+        {pending ? "Saving…" : nextStatus === "archived" ? "Make inactive" : "Make active"}
       </Button>
       {state.error ? <p className="mt-1 text-xs text-destructive">{state.error}</p> : null}
     </form>

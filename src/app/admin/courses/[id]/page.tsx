@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { AssignmentFilters, AssignmentTable } from "@/components/dashboard/assignment-table";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { Button } from "@/components/ui/button";
 import { matchesAssignmentFilter, readAssignmentFilter } from "@/lib/assignment-view";
 import { listAssignments } from "@/lib/assignments";
 import { formatBytes, formatDuration } from "@/lib/format";
@@ -52,7 +53,7 @@ export default async function CourseDetailPage({
           <div>
             <h6 className="text-lg font-semibold">{course.title}</h6>
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
-              <StatusBadge status={course.status} />
+              <StatusBadge status={course.status} label={course.status === "archived" ? "Inactive" : undefined} />
               <span className="mx-2 text-neutral-300">/</span>
               {formatDuration(course.video.durationSeconds)}
               <span className="mx-2 text-neutral-300">/</span>
@@ -61,7 +62,12 @@ export default async function CourseDetailPage({
               {course.video.originalFileName}
             </p>
           </div>
-          <CourseStatusForm courseId={course._id.toString()} status={course.status} action={setCourseStatusAction} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/admin/courses/${course._id.toString()}/edit`}>Edit</Link>
+            </Button>
+            <CourseStatusForm courseId={course._id.toString()} status={course.status} action={setCourseStatusAction} />
+          </div>
         </div>
         {course.description ? (
           <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-600 dark:text-neutral-300">

@@ -66,3 +66,9 @@ export function formatDay(value: Date | undefined | null): string {
   if (!value) return "—";
   return value.toISOString().slice(0, 10);
 }
+
+export function assignmentStatusLabel(status: AssignmentStatus): string {
+  if (status === "in_progress") return "In progress";
+  if (status === "completed") return "Completed";
+  return "Not started";
+}

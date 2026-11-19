@@ -36,5 +36,5 @@ export const proxy = auth((request) => {
 export const config = {
   // The course upload is omitted so Next does not copy the video into memory.
   // POST /api/admin/courses checks the session itself. Other routes stay gated here.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/admin/courses$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/admin/courses(?:/[^/]+)?$).*)"],
 };

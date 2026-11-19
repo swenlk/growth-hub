@@ -211,6 +211,27 @@ export async function setTemporaryPassword(userId: string, password: string) {
   }
 }
 
+/** Update the sign-in name and whether the account can sign in. Other Keycloak fields stay as they are. */
+export async function updateStaffAccount(userId: string, input: { name: string; enabled: boolean }) {
+  const name = z.string().trim().min(1).max(120).parse(input.name);
+  const config = settings();
+  const current = await adminFetch(`/admin/realms/${config.realm}/users/${encodeURIComponent(userId)}`);
+  if (current.status === 404) {
+    throw new KeycloakAdminError("Keycloak user was not found", 404);
+  }
+  if (!current.ok) {
+    throw new KeycloakAdminError(await errorMessage(current, "Could not read the Keycloak user"), current.status);
+  }
+  const user = (await current.json()) as Record<string, unknown>;
+  const response = await adminFetch(`/admin/realms/${config.realm}/users/${encodeURIComponent(userId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ ...user, firstName: name, enabled: input.enabled }),
+  });
+  if (!response.ok) {
+    throw new KeycloakAdminError(await errorMessage(response, "Could not update the Keycloak user"), response.status);
+  }
+}
+
 export async function enableUser(userId: string) {
   await setUserEnabled(userId, true);
 }

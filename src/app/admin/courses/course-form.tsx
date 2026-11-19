@@ -100,8 +100,8 @@ export function CourseCreateForm({ maxBytes }: { maxBytes: number }) {
     setError(null);
     setProgress(0);
     void postCourse(body, setProgress)
-      .then((id) => {
-        router.push(`/admin/courses/${id}`);
+      .then(() => {
+        router.push("/admin/courses");
         router.refresh();
       })
       .catch((uploadError: unknown) => {
@@ -113,7 +113,7 @@ export function CourseCreateForm({ maxBytes }: { maxBytes: number }) {
   const uploading = progress !== null;
 
   return (
-    <form onSubmit={onSubmit} className="relative space-y-4">
+    <form onSubmit={onSubmit} className="relative max-w-3xl space-y-4">
       <label className="grid gap-2 text-sm font-medium">
         Title
         <Input

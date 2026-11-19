@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 
+import { ListPager } from "@/components/dashboard/list-pager";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { headCell, lastBodyCell } from "@/components/dashboard/table-styles";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 
-import { createStaffAction, setStaffStatusAction } from "./actions";
-import { StaffCreateForm } from "./staff-form";
-import { StaffStatusForm } from "./status-form";
+const pageSize = 10;
+
+function staffPageHref(page: number) {
+  return page <= 1 ? "/admin/staff" : `/admin/staff?page=${page}`;
+}
 
 export const metadata: Metadata = {
   title: "Staff",
@@ -17,73 +22,75 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function StaffListPage() {
+export default async function StaffListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await requireRole("tenant_admin");
   const { models } = await getTenantContext();
-  const staff = await models.Staff.find().sort({ createdAt: -1 }).lean();
+  const requested = Number((await searchParams).page);
+  const total = await models.Staff.countDocuments();
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const page = Number.isInteger(requested) && requested > 0 ? Math.min(requested, pageCount) : 1;
+  const staff = await models.Staff.find()
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * pageSize)
+    .limit(pageSize)
+    .lean();
+  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = (page - 1) * pageSize + staff.length;
 
   return (
     <>
       <DashboardBreadcrumb title="Staff" text="Directory" />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-4">
-          <div className="card">
-            <h6 className="mb-1 text-lg font-semibold">Add staff</h6>
-            <p className="mb-5 text-sm text-neutral-500 dark:text-neutral-300">
-              A new person is stored for this organization and given a sign-in in the same Keycloak
-              realm. If the sign-in account cannot be created, the organization record is removed.
-            </p>
-            <StaffCreateForm action={createStaffAction} />
-          </div>
+      <div className="card">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h6 className="text-lg font-semibold">Staff</h6>
+          <Button asChild>
+            <Link href="/admin/staff/new">Add staff</Link>
+          </Button>
         </div>
-        <div className="xl:col-span-8">
-          <div className="card">
-            <h6 className="mb-4 text-lg font-semibold">People</h6>
-            {staff.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-neutral-300 px-6 py-10 text-center text-sm text-neutral-500 dark:border-slate-600 dark:text-neutral-300">
-                No staff yet.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className={headCell}>Name</TableHead>
-                    <TableHead className={headCell}>Email</TableHead>
-                    <TableHead className={headCell}>Status</TableHead>
-                    <TableHead className={headCell}>
-                      <span className="sr-only">Actions</span>
-                    </TableHead>
+        {staff.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-neutral-300 px-6 py-10 text-center text-sm text-neutral-500 dark:border-slate-600 dark:text-neutral-300">
+            No staff yet.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className={headCell}>#</TableHead>
+                <TableHead className={headCell}>Name</TableHead>
+                <TableHead className={headCell}>Email</TableHead>
+                <TableHead className={headCell}>Status</TableHead>
+                <TableHead className={headCell}>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {staff.map((person, index) => {
+                const cell = lastBodyCell(index === staff.length - 1);
+                return (
+                  <TableRow key={String(person._id)}>
+                    <TableCell className={cell}>{(page - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell className={`${cell} font-medium`}>{person.name}</TableCell>
+                    <TableCell className={cell}>{person.email}</TableCell>
+                    <TableCell className={cell}>
+                      <StatusBadge status={person.status} label={person.status === "disabled" ? "Inactive" : undefined} />
+                    </TableCell>
+                    <TableCell className={cell}>
+                      <Button asChild size="icon" variant="outline" className="size-8">
+                        <Link href={`/admin/staff/${person._id.toString()}/edit`} aria-label={`Edit ${person.name}`}>
+                          <Pencil />
+                        </Link>
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staff.map((person, index) => {
-                    const cell = lastBodyCell(index === staff.length - 1);
-                    return (
-                      <TableRow key={String(person._id)}>
-                        <TableCell className={`${cell} font-medium`}>
-                          <Link href={`/admin/staff/${person._id.toString()}`} className="text-primary">
-                            {person.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell className={cell}>{person.email}</TableCell>
-                        <TableCell className={cell}>
-                          <StatusBadge status={person.status} />
-                        </TableCell>
-                        <TableCell className={cell}>
-                          <StaffStatusForm
-                            staffId={person._id.toString()}
-                            status={person.status}
-                            action={setStaffStatusAction}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        </div>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+        <ListPager page={page} pageCount={pageCount} total={total} start={start} end={end} hrefFor={staffPageHref} />
       </div>
     </>
   );

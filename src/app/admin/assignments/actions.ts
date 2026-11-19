@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { dueDateFromInput } from "@/lib/assignment-view";
-import { assignCourse, AssignmentError } from "@/lib/assignments";
+import { assignCourse, AssignmentError, updateAssignment } from "@/lib/assignments";
 import { AuthzError, getTenantContext, requireRole } from "@/lib/rbac";
-import { createAssignmentSchema } from "@/lib/validators";
+import { createAssignmentSchema, updateAssignmentSchema } from "@/lib/validators";
 
 export type AssignFormState = {
   error: string | null;
@@ -57,6 +58,58 @@ export async function assignCourseAction(
   } catch (error) {
     if (error instanceof AuthzError || error instanceof AssignmentError) {
       return { error: error.message, created: null };
+    }
+    throw error;
+  }
+}
+
+export type AssignmentEditState = { error: string | null; saved: boolean };
+
+export async function updateAssignmentAction(
+  _previous: AssignmentEditState,
+  formData: FormData,
+): Promise<AssignmentEditState> {
+  const assignmentId = z.string().uuid().safeParse(formData.get("assignmentId"));
+  const dueRaw = formData.get("dueDate");
+  const parsed = updateAssignmentSchema.safeParse({
+    staffId: formData.get("staffId"),
+    courseId: formData.get("courseId"),
+    dueDate: typeof dueRaw === "string" && dueRaw.trim() !== "" ? dueRaw.trim() : undefined,
+    status: formData.get("status"),
+  });
+  if (!assignmentId.success || !parsed.success) {
+    return {
+      error: parsed.success ? "That assignment update is not valid" : (parsed.error.issues[0]?.message ?? "Check the form"),
+      saved: false,
+    };
+  }
+
+  try {
+    const dueDate = parsed.data.dueDate ? dueDateFromInput(parsed.data.dueDate) : null;
+    await requireRole("tenant_admin");
+    const { models } = await getTenantContext();
+    const updated = await updateAssignment(models, assignmentId.data, {
+      staffId: parsed.data.staffId,
+      courseId: parsed.data.courseId,
+      dueDate,
+      status: parsed.data.status,
+    });
+    revalidatePath("/admin/assignments");
+    revalidatePath(`/admin/assignments/${assignmentId.data}/edit`);
+    revalidatePath(`/admin/courses/${updated.courseId}`);
+    revalidatePath(`/admin/courses/${updated.previousCourseId}`);
+    revalidatePath(`/admin/staff/${updated.staffId}`);
+    revalidatePath(`/admin/staff/${updated.previousStaffId}`);
+    revalidatePath("/admin/reports");
+    revalidatePath("/learn");
+    revalidatePath("/admin");
+    return { error: null, saved: true };
+  } catch (error) {
+    if (error instanceof AuthzError || error instanceof AssignmentError) {
+      return { error: error.message, saved: false };
+    }
+    if (error instanceof Error && error.message === "Use a valid due date") {
+      return { error: error.message, saved: false };
     }
     throw error;
   }

@@ -10,11 +10,12 @@ import {
   disableUser,
   enableUser,
   KeycloakAdminError,
+  updateStaffAccount,
 } from "@/lib/keycloak-admin";
 import type { TenantContext } from "@/lib/rbac";
 import { temporaryPassword } from "@/lib/passwords";
 import type { Staff } from "@/models/Staff";
-import { createStaffSchema, type CreateStaffInput } from "@/lib/validators";
+import { createStaffSchema, updateStaffSchema, type CreateStaffInput, type UpdateStaffInput } from "@/lib/validators";
 import type { StaffStatus } from "@/lib/domain";
 
 export class StaffDirectoryError extends Error {}
@@ -86,6 +87,39 @@ export async function createStaffMember(
   }
 
   return { email: parsed.email, temporaryPassword: password };
+}
+
+/** Name and status are saved together. Email stays the sign-in identity. */
+export async function updateStaffMember(ctx: Pick<TenantContext, "models">, staffId: string, input: UpdateStaffInput) {
+  const parsed = updateStaffSchema.parse(input);
+  const staff = await ctx.models.Staff.findById(staffId);
+  if (!staff) {
+    throw new StaffDirectoryError("Staff member was not found");
+  }
+  if (staff.keycloakUserId.startsWith("pending:")) {
+    throw new StaffDirectoryError("This person is not linked to a sign-in account");
+  }
+  if (staff.name === parsed.name && staff.status === parsed.status) return;
+
+  const previous = { name: staff.name, enabled: staff.status === "active" };
+  try {
+    await updateStaffAccount(staff.keycloakUserId, {
+      name: parsed.name,
+      enabled: parsed.status === "active",
+    });
+  } catch (error) {
+    if (error instanceof KeycloakAdminError) throw new StaffDirectoryError(error.message);
+    throw error;
+  }
+
+  try {
+    staff.name = parsed.name;
+    staff.status = parsed.status;
+    await staff.save();
+  } catch (error) {
+    await updateStaffAccount(staff.keycloakUserId, previous).catch(() => undefined);
+    throw error;
+  }
 }
 
 export async function setStaffStatus(ctx: Pick<TenantContext, "models">, staffId: string, status: StaffStatus) {

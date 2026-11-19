@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDay, isOverdue, watchedPercent, type AssignmentFilter } from "@/lib/assignment-view";
+import { formatDay, isOverdue, watchedPercent, assignmentStatusLabel, type AssignmentFilter } from "@/lib/assignment-view";
 import type { AssignmentRow } from "@/lib/assignments";
 
 import { StatusBadge } from "./status-badge";
@@ -111,7 +111,7 @@ export function AssignmentTable({
                 {overdue ? <span className="ml-2 text-destructive">Overdue</span> : null}
               </TableCell>
               <TableCell className={cell}>
-                <StatusBadge status={row.status} />
+                <StatusBadge status={row.status} label={assignmentStatusLabel(row.status)} />
               </TableCell>
               <TableCell className={cell}>{watchedPercent(row.watchedSeconds, row.durationSeconds)}%</TableCell>
               <TableCell className={cell}>{formatDay(row.completedAt)}</TableCell>

@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import type { AccountFormState } from "@/lib/form-state";
 import { AuthzError, getTenantContext, requireRole } from "@/lib/rbac";
-import { createStaffMember, setStaffStatus, StaffDirectoryError } from "@/lib/staff-directory";
-import { createStaffSchema, objectIdSchema, staffStatusSchema } from "@/lib/validators";
+import { createStaffMember, StaffDirectoryError, updateStaffMember } from "@/lib/staff-directory";
+import { createStaffSchema, objectIdSchema, updateStaffSchema } from "@/lib/validators";
 
 export async function createStaffAction(
   _previous: AccountFormState,
@@ -37,27 +37,35 @@ export async function createStaffAction(
   }
 }
 
-export async function setStaffStatusAction(
-  _previous: { error: string | null },
+export type StaffEditState = { error: string | null; saved: boolean };
+
+export async function updateStaffAction(
+  _previous: StaffEditState,
   formData: FormData,
-): Promise<{ error: string | null }> {
+): Promise<StaffEditState> {
   const staffId = objectIdSchema.safeParse(formData.get("staffId"));
-  const status = staffStatusSchema.safeParse(formData.get("status"));
-  if (!staffId.success || !status.success) {
-    return { error: "That staff update is not valid" };
+  const parsed = updateStaffSchema.safeParse({
+    name: formData.get("name"),
+    status: formData.get("status"),
+  });
+  if (!staffId.success || !parsed.success) {
+    return { error: parsed.success ? "That staff update is not valid" : (parsed.error.issues[0]?.message ?? "Check the form"), saved: false };
   }
 
   try {
     await requireRole("tenant_admin");
     const ctx = await getTenantContext();
-    await setStaffStatus(ctx, staffId.data, status.data);
+    await updateStaffMember(ctx, staffId.data, parsed.data);
   } catch (error) {
-    if (error instanceof AuthzError || error instanceof StaffDirectoryError) return { error: error.message };
+    if (error instanceof AuthzError || error instanceof StaffDirectoryError) {
+      return { error: error.message, saved: false };
+    }
     throw error;
   }
 
   revalidatePath("/admin/staff");
   revalidatePath(`/admin/staff/${staffId.data}`);
+  revalidatePath(`/admin/staff/${staffId.data}/edit`);
   revalidatePath("/admin");
-  return { error: null };
+  return { error: null, saved: true };
 }

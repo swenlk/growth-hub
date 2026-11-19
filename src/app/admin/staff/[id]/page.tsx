@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { AssignmentTable } from "@/components/dashboard/assignment-table";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { Button } from "@/components/ui/button";
 import { listAssignments } from "@/lib/assignments";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 import { objectIdSchema } from "@/lib/validators";
@@ -38,11 +39,16 @@ export default async function StaffDetailPage({
             Staff
           </Link>
         </p>
-        <h6 className="mt-2 text-lg font-semibold">{person.name}</h6>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <h6 className="text-lg font-semibold">{person.name}</h6>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/admin/staff/${id}/edit`}>Edit</Link>
+          </Button>
+        </div>
         <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
           {person.email}
           <span className="mx-2 text-neutral-300">/</span>
-          <StatusBadge status={person.status} />
+          <StatusBadge status={person.status} label={person.status === "disabled" ? "Inactive" : undefined} />
         </p>
       </div>
       <div className="card">

@@ -37,7 +37,8 @@ export function AssignForm({
   }
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="max-w-3xl space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
       <label className="grid gap-2 text-sm font-medium">
         Course
         <select name="courseId" required className={selectClass} defaultValue="">
@@ -51,6 +52,11 @@ export function AssignForm({
           ))}
         </select>
       </label>
+      <label className="grid gap-2 text-sm font-medium">
+        Due date
+        <Input name="dueDate" type="date" />
+      </label>
+      </div>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Staff</legend>
         <label className="flex items-center gap-2 text-sm">
@@ -84,10 +90,6 @@ export function AssignForm({
           ))}
         </div>
       </fieldset>
-      <label className="grid gap-2 text-sm font-medium">
-        Due date
-        <Input name="dueDate" type="date" />
-      </label>
       <p className="text-sm text-neutral-500 dark:text-neutral-300">
         Each selected person gets a new assignment. Someone who already has this course keeps the
         earlier one as well. A due date runs through 23:59 UTC.

@@ -50,6 +50,13 @@ export const createStaffSchema = z
   })
   .strict();
 
+export const updateStaffSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    status: staffStatusSchema,
+  })
+  .strict();
+
 export const courseDetailsSchema = z
   .object({
     title: z.string().trim().min(1).max(200),
@@ -62,7 +69,24 @@ export const courseDetailsSchema = z
   })
   .strict();
 
+export const updateCourseSchema = z
+  .object({
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().max(4000),
+    status: courseStatusSchema,
+  })
+  .strict();
+
 const calendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid due date");
+
+export const updateAssignmentSchema = z
+  .object({
+    staffId: objectIdSchema,
+    courseId: objectIdSchema,
+    dueDate: calendarDateSchema.optional(),
+    status: assignmentStatusSchema,
+  })
+  .strict();
 
 export const createAssignmentSchema = z
   .object({
@@ -86,6 +110,9 @@ export const progressHeartbeatSchema = z
 
 export type CreateTenantInput = z.infer<typeof createTenantSchema>;
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+export type UpdateStaffInput = z.infer<typeof updateStaffSchema>;
 export type CourseDetailsInput = z.infer<typeof courseDetailsSchema>;
+export type UpdateCourseInput = z.infer<typeof updateCourseSchema>;
 export type CreateAssignmentInput = z.infer<typeof createAssignmentSchema>;
+export type UpdateAssignmentInput = z.infer<typeof updateAssignmentSchema>;
 export type ProgressHeartbeatInput = z.infer<typeof progressHeartbeatSchema>;

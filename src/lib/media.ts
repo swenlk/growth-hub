@@ -32,6 +32,7 @@ export type StoredUpload = {
   durationSeconds: number;
   title: string;
   description?: string;
+  status?: string;
 };
 
 export type ByteRange =
@@ -188,6 +189,7 @@ export async function writeVideoUpload(
       durationSeconds: details.data.durationSeconds,
       title: details.data.title,
       description: details.data.description,
+      status: parsed.fields.get("status"),
     };
   } catch (error) {
     await discard(tempPath);
@@ -306,7 +308,7 @@ function parseMultipart(
         fieldError = true;
         return;
       }
-      if (name === "title" || name === "description" || name === "durationSeconds") {
+      if (name === "title" || name === "description" || name === "durationSeconds" || name === "status") {
         fields.set(name, value);
       }
     });
