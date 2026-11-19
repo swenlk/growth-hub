@@ -56,13 +56,18 @@ export function maxUploadBytes(): number {
   return Math.floor(mb * 1024 * 1024);
 }
 
-/** Stored names are uuid plus extension, never a client path. */
+/**
+ * Stored names are uuid plus extension, never a client path.
+ * A directory prefix is stripped with basename before the name is checked,
+ * so the resolved file stays inside root.
+ */
 export function resolveStoredFile(root: string, storedFileName: string): string {
-  if (!STORED_FILE_NAME.test(storedFileName)) {
+  const leaf = path.basename(storedFileName);
+  if (!STORED_FILE_NAME.test(leaf)) {
     throw new MediaError(400, "Invalid file name");
   }
   const base = path.resolve(root);
-  const full = path.resolve(base, storedFileName);
+  const full = path.resolve(base, leaf);
   if (path.dirname(full) !== base) {
     throw new MediaError(400, "Invalid file name");
   }

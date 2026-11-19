@@ -4,11 +4,11 @@ import { StatusBadge } from "@/components/dashboard/status-badge";
 import { headCell, lastBodyCell } from "@/components/dashboard/table-styles";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { connectDB } from "@/lib/db";
+import { getPlatformModels } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
-import { TenantModel } from "@/models/Tenant";
 
-import { createTenantAction } from "./actions";
+import { createTenantAction, setTenantStatusAction } from "./actions";
+import { TenantStatusForm } from "./status-form";
 import { TenantCreateForm } from "./tenant-form";
 
 export const metadata: Metadata = {
@@ -19,8 +19,8 @@ export const dynamic = "force-dynamic";
 
 export default async function TenantsPage() {
   await requireRole("super_admin");
-  await connectDB();
-  const tenants = await TenantModel.find().sort({ createdAt: -1 }).lean();
+  const { Tenant } = await getPlatformModels();
+  const tenants = await Tenant.find().sort({ createdAt: -1 }).lean();
 
   return (
     <>
@@ -30,8 +30,8 @@ export default async function TenantsPage() {
           <div className="card">
             <h6 className="mb-1 text-lg font-semibold">New organization</h6>
             <p className="mb-5 text-sm text-neutral-500 dark:text-neutral-300">
-              Each organization has one sign-in. Creating it also creates the first tenant admin.
-              They sign in with the same button as everyone else.
+              Each organization has its own database and video folder, plus one sign-in.
+              Creating it also creates the first tenant admin. They sign in with the same button as everyone else.
             </p>
             <TenantCreateForm action={createTenantAction} />
           </div>
@@ -51,6 +51,9 @@ export default async function TenantsPage() {
                     <TableHead className={headCell}>Slug</TableHead>
                     <TableHead className={headCell}>Status</TableHead>
                     <TableHead className={headCell}>Created</TableHead>
+                    <TableHead className={headCell}>
+                      <span className="sr-only">Access</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -65,6 +68,13 @@ export default async function TenantsPage() {
                           <StatusBadge status={tenant.status} />
                         </TableCell>
                         <TableCell className={cell}>{tenant.createdAt.toISOString().slice(0, 10)}</TableCell>
+                        <TableCell className={cell}>
+                          <TenantStatusForm
+                            slug={tenant.slug}
+                            status={tenant.status}
+                            action={setTenantStatusAction}
+                          />
+                        </TableCell>
                       </TableRow>
                     );
                   })}

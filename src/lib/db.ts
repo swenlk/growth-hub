@@ -1,21 +1,15 @@
 import "server-only";
 
-import mongoose from "mongoose";
+import mongoose, { type Connection, type Model, type Schema } from "mongoose";
 import { z } from "zod";
 
-import { CourseModel } from "@/models/Course";
-import { StaffModel } from "@/models/Staff";
-import { TenantModel } from "@/models/Tenant";
-
-const DEFAULT_DB_NAME = "training_platform";
+import { courseSchema, type Course } from "@/models/Course";
+import { staffSchema, type Staff } from "@/models/Staff";
+import { tenantSchema, type Tenant } from "@/models/Tenant";
+import { platformDbName, tenantDbName } from "@/lib/tenant";
 
 const mongoEnvSchema = z.object({
   MONGODB_URI: z.string().trim().min(1),
-  MONGODB_DATABASE: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => (value ? value : undefined)),
 });
 
 type MongooseCache = {
@@ -34,36 +28,26 @@ const cache: MongooseCache = globalForMongoose.__trainingMongoose ?? {
 
 globalForMongoose.__trainingMongoose = cache;
 
-function databaseFromUri(uri: string): string | undefined {
-  try {
-    const name = new URL(uri).pathname.replace(/^\//, "").split("/")[0];
-    return name || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function mongoSettings(): { uri: string; dbName: string } {
+function mongoUri(): string {
   const parsed = mongoEnvSchema.safeParse({
     MONGODB_URI: process.env.MONGODB_URI,
-    MONGODB_DATABASE: process.env.MONGODB_DATABASE,
   });
-
   if (!parsed.success) {
     throw new Error("MONGODB_URI is not set");
   }
+  return parsed.data.MONGODB_URI;
+}
 
-  const dbName =
-    parsed.data.MONGODB_DATABASE ??
-    databaseFromUri(parsed.data.MONGODB_URI) ??
-    DEFAULT_DB_NAME;
-
-  return { uri: parsed.data.MONGODB_URI, dbName };
+function modelFor<T>(connection: Connection, name: string, schema: Schema<T>, collection: string): Model<T> {
+  const existing = connection.models[name] as Model<T> | undefined;
+  if (existing) return existing;
+  return connection.model<T>(name, schema, collection);
 }
 
 /**
- * Reuse one connection across hot reloads in `next dev`.
- * Every tenant-owned query must still filter on session.tenantId.
+ * One socket per server process. Hot reload reuses it through globalThis.
+ * Tenant data is not stored on this connection's default database.
+ * Call getPlatformDb or getTenantDb, which select a database by name.
  */
 export async function connectDB(): Promise<typeof mongoose> {
   if (cache.conn) {
@@ -71,26 +55,58 @@ export async function connectDB(): Promise<typeof mongoose> {
   }
 
   if (!cache.promise) {
-    const { uri, dbName } = mongoSettings();
-    cache.promise = mongoose
-      .connect(uri, {
-        dbName,
-        serverSelectionTimeoutMS: 5000,
-      })
-      .then(async (connection) => {
-        await Promise.all([
-          TenantModel.createIndexes(),
-          CourseModel.createIndexes(),
-          StaffModel.createIndexes(),
-        ]);
-        return connection;
-      })
-      .catch((error: unknown) => {
-        cache.promise = null;
-        throw error;
-      });
+    cache.promise = mongoose.connect(mongoUri(), { serverSelectionTimeoutMS: 5000 }).catch((error: unknown) => {
+      cache.promise = null;
+      throw error;
+    });
   }
 
   cache.conn = await cache.promise;
   return cache.conn;
+}
+
+/** Control database. The Tenant registry model is registered on the returned connection. */
+export async function getPlatformDb(): Promise<Connection> {
+  const base = await connectDB();
+  const db = base.connection.useDb(platformDbName(), { useCache: true });
+  modelFor(db, "Tenant", tenantSchema, "tenants");
+  return db;
+}
+
+export async function getPlatformModels(): Promise<{ Tenant: Model<Tenant> }> {
+  const db = await getPlatformDb();
+  return { Tenant: modelFor(db, "Tenant", tenantSchema, "tenants") };
+}
+
+/**
+ * Dedicated database for one tenant. The slug is validated before the name is built.
+ * Request handlers must go through getTenantContext(). This is for provisioning and other
+ * explicit platform work.
+ */
+export async function getTenantDb(slug: string): Promise<Connection> {
+  const base = await connectDB();
+  return base.connection.useDb(tenantDbName(slug), { useCache: true });
+}
+
+export async function getTenantModels(slug: string): Promise<{ Course: Model<Course>; Staff: Model<Staff> }> {
+  const db = await getTenantDb(slug);
+  return {
+    Course: modelFor(db, "Course", courseSchema, "courses"),
+    Staff: modelFor(db, "Staff", staffSchema, "staff"),
+  };
+}
+
+/** Create the tenant collections and indexes. Mongo creates the database on the first write. */
+export async function provisionTenantDatabase(slug: string): Promise<void> {
+  const { Course, Staff } = await getTenantModels(slug);
+  await Course.createCollection();
+  await Course.syncIndexes();
+  await Staff.createCollection();
+  await Staff.syncIndexes();
+}
+
+/** Drop one tenant database. The slug is validated before the name is used. */
+export async function dropTenantDatabase(slug: string): Promise<void> {
+  const db = await getTenantDb(slug);
+  await db.dropDatabase();
 }

@@ -6,10 +6,8 @@ import { StatusBadge } from "@/components/dashboard/status-badge";
 import { headCell, lastBodyCell } from "@/components/dashboard/table-styles";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { connectDB } from "@/lib/db";
-import { requireRole, tenantObjectId } from "@/lib/rbac";
+import { getTenantContext, requireRole } from "@/lib/rbac";
 import { objectIdSchema } from "@/lib/validators";
-import { StaffModel } from "@/models/Staff";
 
 export const metadata: Metadata = {
   title: "Staff member",
@@ -25,14 +23,9 @@ export default async function StaffDetailPage({
   const { id } = await params;
   if (!objectIdSchema.safeParse(id).success) notFound();
 
-  const session = await requireRole("tenant_admin");
-  if (!session.tenantId) notFound();
-  await connectDB();
-
-  const person = await StaffModel.findOne({
-    _id: id,
-    tenantId: tenantObjectId(session.tenantId),
-  }).lean();
+  await requireRole("tenant_admin");
+  const { models } = await getTenantContext();
+  const person = await models.Staff.findById(id).lean();
   if (!person) notFound();
 
   return (

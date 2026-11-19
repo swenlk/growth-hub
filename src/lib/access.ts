@@ -49,7 +49,7 @@ export function isPublicPath(pathname: string): boolean {
   );
 }
 
-/** Role gate for pages and API routes. Tenant filtering still happens in each query. */
+/** Role gate for pages and API routes. Tenant data is loaded with getTenantContext(). */
 export function canAccess(pathname: string, roles: AppRole[]): boolean {
   if (pathname.startsWith("/platform") || pathname.startsWith("/api/platform")) {
     return roles.includes("super_admin");

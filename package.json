@@ -8,7 +8,13 @@
     "start": "next start",
     "lint": "eslint .",
     "test:media": "tsx tests/media.test.ts",
-    "setup:keycloak": "tsx scripts/setup-keycloak.ts"
+    "test:tenant": "tsx tests/tenant.test.ts",
+    "test:models": "tsx tests/models.test.ts",
+    "test:migrate": "tsx tests/migrate-plan.test.ts",
+    "setup:keycloak": "tsx scripts/setup-keycloak.ts",
+    "seed": "node --conditions=react-server --import tsx scripts/seed.ts",
+    "migrate:tenants": "node --conditions=react-server --import tsx scripts/migrate-to-tenant-dbs.ts",
+    "reset:dev": "node --conditions=react-server --import tsx scripts/reset-dev.ts"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.7",

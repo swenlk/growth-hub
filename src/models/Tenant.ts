@@ -1,4 +1,4 @@
-import mongoose, { type Model, Schema, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
 
 import { TENANT_STATUSES, type TenantStatus } from "@/lib/domain";
 
@@ -8,18 +8,20 @@ export interface Tenant {
   slug: string;
   status: TenantStatus;
   createdAt: Date;
-  updatedAt: Date;
 }
 
-const tenantSchema = new Schema<Tenant>(
+export const tenantSchema = new Schema<Tenant>(
   {
     name: { type: String, required: true, trim: true },
-    slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      immutable: true,
+      lowercase: true,
+      trim: true,
+    },
     status: { type: String, enum: TENANT_STATUSES, required: true, default: "active" },
   },
-  { timestamps: true },
+  { timestamps: { createdAt: true, updatedAt: false } },
 );
-
-export const TenantModel: Model<Tenant> =
-  (mongoose.models.Tenant as Model<Tenant> | undefined) ??
-  mongoose.model<Tenant>("Tenant", tenantSchema, "tenants");

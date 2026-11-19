@@ -7,6 +7,7 @@ import {
   STAFF_STATUSES,
   TENANT_STATUSES,
 } from "@/lib/domain";
+import { RESERVED_SLUGS, SLUG_MAX, SLUG_REGEX } from "@/lib/tenant";
 
 export const roleSchema = z.enum(ROLES);
 export const tenantStatusSchema = z.enum(TENANT_STATUSES);
@@ -22,9 +23,10 @@ const slugSchema = z
   .string()
   .trim()
   .min(1)
-  .max(80)
+  .max(SLUG_MAX)
   .toLowerCase()
-  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens");
+  .regex(SLUG_REGEX, "Use lowercase letters, numbers, and hyphens")
+  .refine((slug) => !RESERVED_SLUGS.has(slug), "That slug is reserved");
 
 export const createTenantSchema = z
   .object({
@@ -32,6 +34,12 @@ export const createTenantSchema = z
     slug: slugSchema,
     adminName: z.string().trim().min(1).max(120),
     adminEmail: z.string().trim().email().max(254).toLowerCase(),
+  })
+  .strict();
+
+export const updateTenantStatusSchema = z
+  .object({
+    status: tenantStatusSchema,
   })
   .strict();
 

@@ -2,7 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { StaffModel } from "@/models/Staff";
+import type { Model } from "mongoose";
+
 import {
   createUser,
   deleteUser,
@@ -10,8 +11,9 @@ import {
   enableUser,
   KeycloakAdminError,
 } from "@/lib/keycloak-admin";
+import type { TenantContext } from "@/lib/rbac";
 import { temporaryPassword } from "@/lib/passwords";
-import { tenantObjectId } from "@/lib/rbac";
+import type { Staff } from "@/models/Staff";
 import { createStaffSchema, type CreateStaffInput } from "@/lib/validators";
 import type { StaffStatus } from "@/lib/domain";
 
@@ -26,21 +28,23 @@ function duplicateKey(error: unknown): boolean {
   );
 }
 
+type StaffWriter = Pick<TenantContext, "slug" | "models">;
+
 /**
- * Mongo row first, then the Keycloak user. The Keycloak tenantId is the session
- * tenant, never a value from the form. A Keycloak failure deletes the Mongo row.
+ * Mongo row first, then the Keycloak user. The Staff model and slug both come from
+ * getTenantContext(). Keycloak receives that slug, never a value from the form.
+ * A Keycloak failure deletes the Mongo row.
  */
 export async function createStaffMember(
-  tenantId: string,
+  ctx: StaffWriter,
   input: CreateStaffInput,
 ): Promise<{ email: string; temporaryPassword: string }> {
   const parsed = createStaffSchema.parse(input);
-  const tenantObject = tenantObjectId(tenantId);
+  const Staff: Model<Staff> = ctx.models.Staff;
   let staff;
 
   try {
-    staff = await StaffModel.create({
-      tenantId: tenantObject,
+    staff = await Staff.create({
       name: parsed.name,
       email: parsed.email,
       keycloakUserId: `pending:${randomUUID()}`,
@@ -61,14 +65,14 @@ export async function createStaffMember(
     keycloakUserId = await createUser({
       name: parsed.name,
       email: parsed.email,
-      tenantId,
+      tenantId: ctx.slug,
       role: "staff",
       temporaryPassword: password,
     });
     staff.keycloakUserId = keycloakUserId;
     await staff.save();
   } catch (error) {
-    await StaffModel.deleteOne({ _id: staff._id, tenantId: tenantObject });
+    await Staff.deleteOne({ _id: staff._id });
     if (keycloakUserId) {
       await deleteUser(keycloakUserId).catch(() => undefined);
     }
@@ -84,9 +88,8 @@ export async function createStaffMember(
   return { email: parsed.email, temporaryPassword: password };
 }
 
-export async function setStaffStatus(tenantId: string, staffId: string, status: StaffStatus) {
-  const tenantObject = tenantObjectId(tenantId);
-  const staff = await StaffModel.findOne({ _id: staffId, tenantId: tenantObject });
+export async function setStaffStatus(ctx: Pick<TenantContext, "models">, staffId: string, status: StaffStatus) {
+  const staff = await ctx.models.Staff.findOne({ _id: staffId });
   if (!staff) {
     throw new StaffDirectoryError("Staff member was not found");
   }

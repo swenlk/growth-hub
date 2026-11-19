@@ -2,24 +2,31 @@ import "server-only";
 
 import { z } from "zod";
 
+import { SLUG_MAX, TenantSlugError, assertValidSlug, tenantAttributeValue } from "@/lib/tenant";
 import { roleSchema } from "@/lib/validators";
 
 const createUserSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
     email: z.string().trim().email().max(254).toLowerCase(),
-    tenantId: z.string().trim().min(1).max(64).nullable(),
+    tenantId: z.string().trim().min(1).max(SLUG_MAX).nullable(),
     role: roleSchema,
     temporaryPassword: z.string().min(8).max(128).optional(),
   })
   .strict()
   .superRefine((value, context) => {
-    if (value.role !== "super_admin" && !value.tenantId) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["tenantId"],
-        message: "tenantId is required for this role",
-      });
+    try {
+      tenantAttributeValue(value.role, value.tenantId);
+    } catch (error) {
+      if (error instanceof TenantSlugError) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tenantId"],
+          message: error.message,
+        });
+        return;
+      }
+      throw error;
     }
   });
 
@@ -139,6 +146,7 @@ function userIdFromLocation(location: string | null): string {
 
 export async function createUser(input: CreateKeycloakUserInput): Promise<string> {
   const user = createUserSchema.parse(input);
+  const tenantSlug = tenantAttributeValue(user.role, user.tenantId);
   const config = settings();
   const response = await adminFetch(`/admin/realms/${config.realm}/users`, {
     method: "POST",
@@ -149,7 +157,7 @@ export async function createUser(input: CreateKeycloakUserInput): Promise<string
       enabled: true,
       emailVerified: true,
       requiredActions: ["UPDATE_PASSWORD"],
-      attributes: user.tenantId ? { tenantId: [user.tenantId] } : undefined,
+      attributes: tenantSlug === null ? undefined : { tenantId: [tenantSlug] },
     }),
   });
 
@@ -229,6 +237,60 @@ async function setUserEnabled(userId: string, enabled: boolean) {
     const fallback = enabled ? "Could not enable the Keycloak user" : "Could not disable the Keycloak user";
     throw new KeycloakAdminError(await errorMessage(response, fallback), response.status);
   }
+}
+
+type RealmUser = {
+  id: string;
+  email?: string;
+  attributes?: Record<string, string[]>;
+};
+
+export async function listRealmUsers(): Promise<RealmUser[]> {
+  const config = settings();
+  const users: RealmUser[] = [];
+  const pageSize = 100;
+
+  for (let first = 0; first < pageSize * 200; first += pageSize) {
+    const response = await adminFetch(
+      `/admin/realms/${config.realm}/users?briefRepresentation=false&first=${first}&max=${pageSize}`,
+    );
+    if (!response.ok) {
+      throw new KeycloakAdminError(await errorMessage(response, "Could not list Keycloak users"), response.status);
+    }
+    const batch = (await response.json()) as RealmUser[];
+    users.push(...batch.filter((user) => typeof user.id === "string" && user.id.length > 0));
+    if (batch.length < pageSize) return users;
+  }
+  throw new KeycloakAdminError("Keycloak user list is larger than 20000", 500);
+}
+
+/** Point an existing user at a tenant slug. Other attributes are left in place. */
+export async function setUserTenantSlug(userId: string, slug: string): Promise<"updated" | "unchanged"> {
+  const tenantSlug = assertValidSlug(slug);
+  const config = settings();
+  const current = await adminFetch(`/admin/realms/${config.realm}/users/${encodeURIComponent(userId)}`);
+  if (current.status === 404) {
+    throw new KeycloakAdminError("Keycloak user was not found", 404);
+  }
+  if (!current.ok) {
+    throw new KeycloakAdminError(await errorMessage(current, "Could not read the Keycloak user"), current.status);
+  }
+
+  const user = (await current.json()) as RealmUser & Record<string, unknown>;
+  const currentSlug = user.attributes?.tenantId?.[0] ?? null;
+  if (currentSlug === tenantSlug) return "unchanged";
+
+  const response = await adminFetch(`/admin/realms/${config.realm}/users/${encodeURIComponent(userId)}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      ...user,
+      attributes: { ...(user.attributes ?? {}), tenantId: [tenantSlug] },
+    }),
+  });
+  if (!response.ok) {
+    throw new KeycloakAdminError(await errorMessage(response, "Could not update the tenant slug"), response.status);
+  }
+  return "updated";
 }
 
 export async function deleteUser(userId: string) {

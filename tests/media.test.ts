@@ -86,6 +86,9 @@ async function main() {
     const stored = resolveStoredFile(root, `${id}.mp4`);
     assert.equal(path.basename(stored), `${id}.mp4`);
     assert.equal(path.dirname(stored), path.resolve(root));
+    const nested = resolveStoredFile(root, path.join("..", "..", `${id}.mp4`));
+    assert.equal(path.basename(nested), `${id}.mp4`);
+    assert.equal(path.dirname(nested), path.resolve(root));
     for (const bad of ["../secret.mp4", "..\\secret.mp4", `${id}.exe`, "not-a-uuid.mp4", `${id}.mp4/../../x`]) {
       assert.throws(() => resolveStoredFile(root, bad), MediaError);
     }

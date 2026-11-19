@@ -1,4 +1,4 @@
-import mongoose, { type Model, Schema, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
 
 import {
   ASSIGNMENT_STATUSES,
@@ -23,7 +23,6 @@ export interface Assignment {
 
 export interface Staff {
   _id: Types.ObjectId;
-  tenantId: Types.ObjectId;
   name: string;
   email: string;
   keycloakUserId: string;
@@ -63,9 +62,8 @@ const assignmentSchema = new Schema<Assignment>(
   { _id: false },
 );
 
-const staffSchema = new Schema<Staff>(
+export const staffSchema = new Schema<Staff>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, lowercase: true, trim: true },
     keycloakUserId: { type: String, required: true },
@@ -75,9 +73,5 @@ const staffSchema = new Schema<Staff>(
   { timestamps: true },
 );
 
-staffSchema.index({ tenantId: 1, email: 1 }, { unique: true });
+staffSchema.index({ email: 1 }, { unique: true });
 staffSchema.index({ keycloakUserId: 1 }, { unique: true });
-
-export const StaffModel: Model<Staff> =
-  (mongoose.models.Staff as Model<Staff> | undefined) ??
-  mongoose.model<Staff>("Staff", staffSchema, "staff");

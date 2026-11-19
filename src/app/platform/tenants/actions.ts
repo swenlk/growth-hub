@@ -3,10 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import type { AccountFormState } from "@/lib/form-state";
-import { connectDB } from "@/lib/db";
 import { AuthzError, requireRole } from "@/lib/rbac";
-import { createTenantWithAdmin, TenantSetupError } from "@/lib/tenants";
-import { createTenantSchema } from "@/lib/validators";
+import { createTenantWithAdmin, setTenantStatus, TenantSetupError } from "@/lib/tenants";
+import { createTenantSchema, updateTenantStatusSchema } from "@/lib/validators";
 
 export async function createTenantAction(
   _previous: AccountFormState,
@@ -14,7 +13,6 @@ export async function createTenantAction(
 ): Promise<AccountFormState> {
   try {
     await requireRole("super_admin");
-    await connectDB();
   } catch (error) {
     if (error instanceof AuthzError) {
       return { error: error.message, created: null };
@@ -45,4 +43,26 @@ export async function createTenantAction(
     }
     throw error;
   }
+}
+
+export async function setTenantStatusAction(
+  _previous: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  const slug = formData.get("slug");
+  const parsed = updateTenantStatusSchema.safeParse({ status: formData.get("status") });
+  if (typeof slug !== "string" || !parsed.success) {
+    return { error: "That update is not valid" };
+  }
+
+  try {
+    await requireRole("super_admin");
+    await setTenantStatus(slug, parsed.data.status);
+  } catch (error) {
+    if (error instanceof AuthzError || error instanceof TenantSetupError) return { error: error.message };
+    throw error;
+  }
+
+  revalidatePath("/platform/tenants");
+  return { error: null };
 }

@@ -1,7 +1,15 @@
-import { Types } from "mongoose";
+import "server-only";
+
+import type { Model } from "mongoose";
+import type { Session } from "next-auth";
 
 import { auth } from "@/lib/auth";
+import { getTenantModels } from "@/lib/db";
 import type { AppRole } from "@/lib/domain";
+import type { Course } from "@/models/Course";
+import type { Staff } from "@/models/Staff";
+import { assertValidSlug, TenantSlugError, tenantMediaDir } from "@/lib/tenant";
+import { registryStatus } from "@/lib/tenant-registry";
 
 export class AuthzError extends Error {
   readonly status: 401 | 403;
@@ -11,6 +19,18 @@ export class AuthzError extends Error {
     this.status = status;
   }
 }
+
+export type TenantModels = {
+  Course: Model<Course>;
+  Staff: Model<Staff>;
+};
+
+export type TenantContext = {
+  slug: string;
+  session: Session;
+  models: TenantModels;
+  mediaDir: string;
+};
 
 export async function requireRole(...allowed: AppRole[]) {
   const session = await auth();
@@ -24,22 +44,39 @@ export async function requireRole(...allowed: AppRole[]) {
 }
 
 /**
- * Tenant id comes only from the Keycloak session.
- * Callers must not accept a tenant id from the request.
- * super_admin is not a member of a tenant; use requireRole("super_admin") instead.
+ * Tenant comes only from the signed-in user.
+ * super_admin has no tenant context and must use the platform database.
+ * A missing or disabled registry row is rejected. Status changes clear that slug's cache;
+ * a lookup that is not cleared expires after about 60 seconds.
  */
-export async function requireTenant() {
+export async function getTenantContext(): Promise<TenantContext> {
   const session = await requireRole("tenant_admin", "staff");
   if (!session.tenantId) {
     throw new AuthzError(403, "Your account is not assigned to a tenant");
   }
-  return { session, tenantId: session.tenantId };
-}
 
-/** Session tenant id is the Mongo id string written onto the Keycloak user. */
-export function tenantObjectId(tenantId: string): Types.ObjectId {
-  if (!Types.ObjectId.isValid(tenantId) || String(new Types.ObjectId(tenantId)) !== tenantId) {
+  let slug: string;
+  try {
+    slug = assertValidSlug(session.tenantId);
+  } catch (error) {
+    if (error instanceof TenantSlugError) {
+      throw new AuthzError(403, "Your account is not assigned to a tenant");
+    }
+    throw error;
+  }
+
+  const status = await registryStatus(slug);
+  if (status === "disabled") {
+    throw new AuthzError(403, "This organization is disabled");
+  }
+  if (status !== "active") {
     throw new AuthzError(403, "Your account is not assigned to a tenant");
   }
-  return new Types.ObjectId(tenantId);
+
+  return {
+    slug,
+    session,
+    models: await getTenantModels(slug),
+    mediaDir: tenantMediaDir(slug),
+  };
 }

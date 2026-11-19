@@ -1,4 +1,4 @@
-import mongoose, { type Model, Schema, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
 
 import { COURSE_STATUSES, type CourseStatus } from "@/lib/domain";
 
@@ -14,7 +14,6 @@ export interface CourseVideo {
 
 export interface Course {
   _id: Types.ObjectId;
-  tenantId: Types.ObjectId;
   title: string;
   description?: string;
   video: CourseVideo;
@@ -34,9 +33,8 @@ const courseVideoSchema = new Schema<CourseVideo>(
   { _id: false },
 );
 
-const courseSchema = new Schema<Course>(
+export const courseSchema = new Schema<Course>(
   {
-    tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     video: { type: courseVideoSchema, required: true },
@@ -44,9 +42,3 @@ const courseSchema = new Schema<Course>(
   },
   { timestamps: true },
 );
-
-courseSchema.index({ tenantId: 1 });
-
-export const CourseModel: Model<Course> =
-  (mongoose.models.Course as Model<Course> | undefined) ??
-  mongoose.model<Course>("Course", courseSchema, "courses");

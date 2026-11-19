@@ -4,11 +4,9 @@ import { notFound } from "next/navigation";
 
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { connectDB } from "@/lib/db";
 import { formatBytes, formatDuration } from "@/lib/format";
-import { requireRole, tenantObjectId } from "@/lib/rbac";
+import { getTenantContext, requireRole } from "@/lib/rbac";
 import { objectIdSchema } from "@/lib/validators";
-import { CourseModel } from "@/models/Course";
 
 import { setCourseStatusAction } from "../actions";
 import { CourseStatusForm } from "../status-form";
@@ -27,14 +25,9 @@ export default async function CourseDetailPage({
   const { id } = await params;
   if (!objectIdSchema.safeParse(id).success) notFound();
 
-  const session = await requireRole("tenant_admin");
-  if (!session.tenantId) notFound();
-  await connectDB();
-
-  const course = await CourseModel.findOne({
-    _id: id,
-    tenantId: tenantObjectId(session.tenantId),
-  }).lean();
+  await requireRole("tenant_admin");
+  const { models } = await getTenantContext();
+  const course = await models.Course.findById(id).lean();
   if (!course) notFound();
 
   return (

@@ -1,16 +1,16 @@
-import { connectDB } from "@/lib/db";
+import { getPlatformDb } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const connection = await connectDB();
-    const collections = await connection.connection.db?.listCollections().toArray();
+    const platform = await getPlatformDb();
+    const collections = await platform.db?.listCollections().toArray();
 
     return Response.json({
       ok: true,
-      database: connection.connection.db?.databaseName ?? "training_platform",
+      database: platform.name,
       collections: (collections ?? []).map((collection) => collection.name).sort(),
     });
   } catch (error) {

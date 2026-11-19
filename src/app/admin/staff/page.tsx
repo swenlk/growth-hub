@@ -5,9 +5,7 @@ import { StatusBadge } from "@/components/dashboard/status-badge";
 import { headCell, lastBodyCell } from "@/components/dashboard/table-styles";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { connectDB } from "@/lib/db";
-import { requireRole, tenantObjectId } from "@/lib/rbac";
-import { StaffModel } from "@/models/Staff";
+import { getTenantContext, requireRole } from "@/lib/rbac";
 
 import { createStaffAction, setStaffStatusAction } from "./actions";
 import { StaffCreateForm } from "./staff-form";
@@ -20,14 +18,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function StaffListPage() {
-  const session = await requireRole("tenant_admin");
-  if (!session.tenantId) {
-    throw new Error("Your account is not assigned to a tenant");
-  }
-  await connectDB();
-  const staff = await StaffModel.find({ tenantId: tenantObjectId(session.tenantId) })
-    .sort({ createdAt: -1 })
-    .lean();
+  await requireRole("tenant_admin");
+  const { models } = await getTenantContext();
+  const staff = await models.Staff.find().sort({ createdAt: -1 }).lean();
 
   return (
     <>

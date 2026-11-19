@@ -3,10 +3,7 @@ import { BookOpen, ChartPie, ClipboardList, UsersRound } from "lucide-react";
 
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Card, CardContent } from "@/components/ui/card";
-import { connectDB } from "@/lib/db";
-import { requireRole, tenantObjectId } from "@/lib/rbac";
-import { CourseModel } from "@/models/Course";
-import { StaffModel } from "@/models/Staff";
+import { getTenantContext, requireRole } from "@/lib/rbac";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -15,18 +12,14 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminHomePage() {
-  const session = await requireRole("tenant_admin");
-  if (!session.tenantId) {
-    throw new Error("Your account is not assigned to a tenant");
-  }
-  await connectDB();
-  const tenantId = tenantObjectId(session.tenantId);
+  await requireRole("tenant_admin");
+  const { models } = await getTenantContext();
+  const { Course, Staff } = models;
 
   const [staffCount, courseCount, assignmentRows] = await Promise.all([
-    StaffModel.countDocuments({ tenantId }),
-    CourseModel.countDocuments({ tenantId }),
-    StaffModel.aggregate<{ total: number; completed: number }>([
-      { $match: { tenantId } },
+    Staff.countDocuments(),
+    Course.countDocuments(),
+    Staff.aggregate<{ total: number; completed: number }>([
       { $unwind: "$assignments" },
       {
         $group: {

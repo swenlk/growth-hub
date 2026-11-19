@@ -5,11 +5,9 @@ import { StatusBadge } from "@/components/dashboard/status-badge";
 import { headCell, lastBodyCell } from "@/components/dashboard/table-styles";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { connectDB } from "@/lib/db";
 import { formatBytes, formatDuration } from "@/lib/format";
 import { maxUploadBytes } from "@/lib/media";
-import { requireRole, tenantObjectId } from "@/lib/rbac";
-import { CourseModel } from "@/models/Course";
+import { getTenantContext, requireRole } from "@/lib/rbac";
 
 import { CourseCreateForm } from "./course-form";
 
@@ -20,14 +18,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function CoursesPage() {
-  const session = await requireRole("tenant_admin");
-  if (!session.tenantId) {
-    throw new Error("Your account is not assigned to a tenant");
-  }
-  await connectDB();
-  const courses = await CourseModel.find({ tenantId: tenantObjectId(session.tenantId) })
-    .sort({ createdAt: -1 })
-    .lean();
+  await requireRole("tenant_admin");
+  const { models } = await getTenantContext();
+  const courses = await models.Course.find().sort({ createdAt: -1 }).lean();
 
   return (
     <>
