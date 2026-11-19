@@ -46,7 +46,11 @@ export const courseDetailsSchema = z
   .object({
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().max(4000).optional(),
-    durationSeconds: z.number().finite().positive(),
+    durationSeconds: z
+      .number()
+      .finite()
+      .positive()
+      .max(24 * 60 * 60, "Video length must be under 24 hours"),
   })
   .strict();
 
