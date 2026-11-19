@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AssignmentFilters, AssignmentTable } from "@/components/dashboard/assignment-table";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { matchesAssignmentFilter, readAssignmentFilter } from "@/lib/assignment-view";
+import { listAssignments } from "@/lib/assignments";
 import { formatBytes, formatDuration } from "@/lib/format";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 import { objectIdSchema } from "@/lib/validators";
@@ -19,16 +22,22 @@ export const dynamic = "force-dynamic";
 
 export default async function CourseDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ filter?: string }>;
 }) {
   const { id } = await params;
   if (!objectIdSchema.safeParse(id).success) notFound();
+  const filter = readAssignmentFilter((await searchParams).filter);
 
   await requireRole("tenant_admin");
   const { models } = await getTenantContext();
   const course = await models.Course.findById(id).lean();
   if (!course) notFound();
+  const rows = (await listAssignments(models, { courseId: id })).filter((row) =>
+    matchesAssignmentFilter(row, filter),
+  );
 
   return (
     <>
@@ -71,6 +80,18 @@ export default async function CourseDetailPage({
           playsInline
           className="max-h-[480px] w-full rounded-md bg-black"
           src={`/api/media/${course._id.toString()}`}
+        />
+      </div>
+      <div className="card mt-4">
+        <h6 className="mb-1 text-lg font-semibold">Assignments</h6>
+        <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-300">
+          Repeated assignments of this course stay on their own rows.
+        </p>
+        <AssignmentFilters pathname={`/admin/courses/${course._id.toString()}`} filter={filter} />
+        <AssignmentTable
+          rows={rows}
+          showCourse={false}
+          empty={filter === "all" ? "No assignments for this course yet." : "No assignments match this filter."}
         />
       </div>
     </>

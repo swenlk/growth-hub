@@ -62,11 +62,13 @@ export const courseDetailsSchema = z
   })
   .strict();
 
+const calendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a valid due date");
+
 export const createAssignmentSchema = z
   .object({
     courseId: objectIdSchema,
-    staffIds: z.array(objectIdSchema).min(1),
-    dueDate: z.string().datetime().optional(),
+    staffIds: z.array(objectIdSchema).min(1).max(200),
+    dueDate: calendarDateSchema.optional(),
   })
   .strict();
 
