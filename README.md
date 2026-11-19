@@ -4,8 +4,6 @@ Multi-tenant staff training. Next.js serves the UI and API. MongoDB stores tenan
 
 This app uses Next.js 16. Route protection will live in `proxy.ts` (the replacement for `middleware.ts`).
 
-The previous dashboard template is in `legacy/wowdash-app` and is not part of the running app.
-
 ## Prerequisites
 
 - Node.js 20+

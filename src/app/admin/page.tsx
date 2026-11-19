@@ -1,0 +1,79 @@
+import type { Metadata } from "next";
+import { BookOpen, ChartPie, ClipboardList, UsersRound } from "lucide-react";
+
+import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { Card, CardContent } from "@/components/ui/card";
+import { connectDB } from "@/lib/db";
+import { requireRole, tenantObjectId } from "@/lib/rbac";
+import { CourseModel } from "@/models/Course";
+import { StaffModel } from "@/models/Staff";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminHomePage() {
+  const session = await requireRole("tenant_admin");
+  if (!session.tenantId) {
+    throw new Error("Your account is not assigned to a tenant");
+  }
+  await connectDB();
+  const tenantId = tenantObjectId(session.tenantId);
+
+  const [staffCount, courseCount, assignmentRows] = await Promise.all([
+    StaffModel.countDocuments({ tenantId }),
+    CourseModel.countDocuments({ tenantId }),
+    StaffModel.aggregate<{ total: number; completed: number }>([
+      { $match: { tenantId } },
+      { $unwind: "$assignments" },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          completed: {
+            $sum: { $cond: [{ $eq: ["$assignments.status", "completed"] }, 1, 0] },
+          },
+        },
+      },
+    ]),
+  ]);
+
+  const assignments = assignmentRows[0]?.total ?? 0;
+  const completed = assignmentRows[0]?.completed ?? 0;
+  const completion = assignments === 0 ? "—" : `${Math.round((completed / assignments) * 100)}%`;
+  const counts = [
+    { label: "Staff", value: String(staffCount), icon: UsersRound, iconBg: "bg-cyan-600", gradientFrom: "from-cyan-600/10" },
+    { label: "Courses", value: String(courseCount), icon: BookOpen, iconBg: "bg-purple-600", gradientFrom: "from-purple-600/10" },
+    { label: "Assignments", value: String(assignments), icon: ClipboardList, iconBg: "bg-primary", gradientFrom: "from-primary/10" },
+    { label: "Completion", value: completion, icon: ChartPie, iconBg: "bg-green-600", gradientFrom: "from-green-600/10" },
+  ];
+
+  return (
+    <>
+      <DashboardBreadcrumb title="Dashboard" text="Overview" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {counts.map((card) => (
+          <Card
+            key={card.label}
+            className={`rounded-md border border-gray-200 bg-gradient-to-r ${card.gradientFrom} to-white p-0 shadow-none dark:border-neutral-700 dark:to-slate-700`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-neutral-600 dark:text-neutral-300">{card.label}</p>
+                  <h3 className="mt-1 text-2xl font-bold text-neutral-900 dark:text-white">{card.value}</h3>
+                </div>
+                <div className={`flex h-12 w-12 items-center justify-center rounded-full ${card.iconBg}`}>
+                  <card.icon className="text-white" size={24} />
+                </div>
+              </div>
+              <p className="mt-4 text-[13px] text-neutral-500 dark:text-neutral-400">This organization</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </>
+  );
+}
