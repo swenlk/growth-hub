@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test:media": "tsx tests/media.test.ts",
     "test:assignments": "tsx tests/assignments.test.ts",
+    "test:progress": "tsx tests/progress.test.ts",
     "test:tenant": "tsx tests/tenant.test.ts",
     "test:models": "tsx tests/models.test.ts",
     "test:migrate": "tsx tests/migrate-plan.test.ts",
