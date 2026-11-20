@@ -5,13 +5,11 @@ import { useActionState, useEffect, useRef, useState, type ChangeEvent, type For
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { CourseStatus } from "@/lib/domain";
 import { formatDuration } from "@/lib/format";
 
 import type { CourseEditState } from "./actions";
-
-const selectClass =
-  "border-input dark:bg-input/30 h-8 w-full rounded-md border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
 const fieldClass =
   "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex min-h-24 w-full rounded-md border bg-transparent px-2.5 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]";
@@ -129,45 +127,53 @@ export function CourseEditForm({
   const error = uploadError ?? state.error;
 
   return (
-    <form action={formAction} onSubmit={onSubmit} className="relative max-w-3xl space-y-4">
+    <form action={formAction} onSubmit={onSubmit} className="relative space-y-4">
       <input type="hidden" name="courseId" value={courseId} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium">
           Title
           <Input name="title" required maxLength={200} defaultValue={title} disabled={uploading} />
         </label>
+        <div className="grid content-start gap-2">
+          <label className="grid gap-2 text-sm font-medium">
+            Video
+            <Input
+              type="file"
+              accept="video/mp4,video/webm,.mp4,.webm"
+              onChange={onFile}
+              disabled={uploading}
+            />
+          </label>
+          <p className="text-sm font-normal text-neutral-500 dark:text-neutral-300">
+            Current file: {fileName}. Choose a new mp4 or webm file to replace it.
+            {duration !== null ? ` New length ${formatDuration(duration)}.` : ""}
+          </p>
+        </div>
         <label className="grid gap-2 text-sm font-medium">
+          Description
+          <textarea
+            name="description"
+            maxLength={4000}
+            defaultValue={description}
+            className={fieldClass}
+            disabled={uploading}
+          />
+        </label>
+        <label className="grid content-start gap-2 text-sm font-medium">
           Status
-          <select name="status" defaultValue={status} className={selectClass} disabled={uploading}>
-            <option value="active">Active</option>
-            <option value="archived">Inactive</option>
-          </select>
+          <SearchableSelect
+            name="status"
+            ariaLabel="Status"
+            defaultValue={status}
+            disabled={uploading}
+            options={[
+              { value: "active", label: "Active" },
+              { value: "archived", label: "Inactive" },
+            ]}
+          />
         </label>
       </div>
-      <label className="grid gap-2 text-sm font-medium">
-        Description
-        <textarea
-          name="description"
-          maxLength={4000}
-          defaultValue={description}
-          className={fieldClass}
-          disabled={uploading}
-        />
-      </label>
-      <label className="grid gap-2 text-sm font-medium">
-        Video
-        <Input
-          type="file"
-          accept="video/mp4,video/webm,.mp4,.webm"
-          onChange={onFile}
-          disabled={uploading}
-        />
-      </label>
       <video ref={videoRef} preload="metadata" className="pointer-events-none absolute h-px w-px opacity-0" aria-hidden />
-      <p className="text-sm text-neutral-500 dark:text-neutral-300">
-        Current file: {fileName}. Choose a new mp4 or webm file to replace it.
-        {duration !== null ? ` New length ${formatDuration(duration)}.` : ""}
-      </p>
       {uploading ? (
         <div className="space-y-1">
           <div className="h-2 overflow-hidden rounded bg-neutral-200 dark:bg-slate-600">

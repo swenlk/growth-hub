@@ -4,13 +4,11 @@ import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { assignmentStatusLabel } from "@/lib/assignment-view";
 import type { AssignmentStatus } from "@/lib/domain";
 
 import type { AssignmentEditState } from "./actions";
-
-const selectClass =
-  "border-input dark:bg-input/30 h-8 w-full rounded-md border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
 const emptyState: AssignmentEditState = { error: null, saved: false };
 
@@ -38,42 +36,42 @@ export function AssignmentEditForm({
   const [state, formAction, pending] = useActionState(action, emptyState);
 
   return (
-    <form action={formAction} className="max-w-3xl space-y-4">
+    <form action={formAction} className="space-y-4">
       <input type="hidden" name="assignmentId" value={assignmentId} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid items-start gap-4 lg:grid-cols-3">
         <label className="grid gap-2 text-sm font-medium">
-          Staff
-          <select name="staffId" defaultValue={staffId} required className={selectClass}>
-            {staff.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.name}
-              </option>
-            ))}
-          </select>
+          <span className="flex h-6 items-center">Course</span>
+          <SearchableSelect
+            name="courseId"
+            ariaLabel="Course"
+            required
+            defaultValue={courseId}
+            options={courses.map((course) => ({ value: course.id, label: course.title }))}
+          />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          Course
-          <select name="courseId" defaultValue={courseId} required className={selectClass}>
-            {courses.map((course) => (
-              <option key={course.id} value={course.id}>
-                {course.title}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-2 text-sm font-medium">
-          Due date
+          <span className="flex h-6 items-center">Due date</span>
           <Input name="dueDate" type="date" defaultValue={dueDate} />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          Status
-          <select name="status" defaultValue={status} required className={selectClass}>
-            {STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {assignmentStatusLabel(value)}
-              </option>
-            ))}
-          </select>
+          <span className="flex h-6 items-center">Staff</span>
+          <SearchableSelect
+            name="staffId"
+            ariaLabel="Staff"
+            required
+            defaultValue={staffId}
+            options={staff.map((person) => ({ value: person.id, label: person.name }))}
+          />
+        </label>
+        <label className="grid gap-2 text-sm font-medium">
+          <span className="flex h-6 items-center">Status</span>
+          <SearchableSelect
+            name="status"
+            ariaLabel="Status"
+            required
+            defaultValue={status}
+            options={STATUSES.map((value) => ({ value, label: assignmentStatusLabel(value) }))}
+          />
         </label>
       </div>
       {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}

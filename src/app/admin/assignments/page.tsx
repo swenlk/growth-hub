@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/dashboard/status-badge";
 import { headCell, lastBodyCell } from "@/components/dashboard/table-styles";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { assignmentStatusLabel, formatDay, isOverdue, watchedPercent } from "@/lib/assignment-view";
 import { listAssignments } from "@/lib/assignments";
@@ -14,9 +15,6 @@ import type { AssignmentStatus } from "@/lib/domain";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 
 const pageSize = 10;
-
-const selectClass =
-  "border-input dark:bg-input/30 h-8 min-w-40 rounded-md border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
 const STATUSES: AssignmentStatus[] = ["assigned", "in_progress", "completed"];
 
@@ -87,40 +85,45 @@ export default async function AssignmentsPage({
   return (
     <>
       <DashboardBreadcrumb title="Assignments" text="Assign" />
-      <div className="card">
+      <div className="card flex flex-1 flex-col !h-auto">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h6 className="text-lg font-semibold">Assignments</h6>
+          <form method="get" className="flex flex-wrap items-center gap-3">
+            <SearchableSelect
+              name="staff"
+              ariaLabel="Staff"
+              defaultValue={staffId}
+              className="min-w-40"
+              options={[
+                { value: "", label: "All staff" },
+                ...staff.map((person) => ({ value: String(person._id), label: person.name })),
+              ]}
+            />
+            <SearchableSelect
+              name="course"
+              ariaLabel="Course"
+              defaultValue={courseId}
+              className="min-w-40"
+              options={[
+                { value: "", label: "All courses" },
+                ...courses.map((course) => ({ value: String(course._id), label: course.title })),
+              ]}
+            />
+            <SearchableSelect
+              name="status"
+              ariaLabel="Status"
+              defaultValue={status}
+              className="min-w-40"
+              options={[
+                { value: "", label: "Not completed" },
+                ...STATUSES.map((value) => ({ value, label: assignmentStatusLabel(value) })),
+              ]}
+            />
+            <Button type="submit">Search</Button>
+          </form>
           <Button asChild>
             <Link href="/admin/assignments/new">Add assignment</Link>
           </Button>
         </div>
-        <form method="get" className="mb-4 flex flex-wrap items-center gap-3">
-          <select name="staff" defaultValue={staffId} className={selectClass} aria-label="Staff">
-            <option value="">Staff</option>
-            {staff.map((person) => (
-              <option key={String(person._id)} value={String(person._id)}>
-                {person.name}
-              </option>
-            ))}
-          </select>
-          <select name="course" defaultValue={courseId} className={selectClass} aria-label="Course">
-            <option value="">Course</option>
-            {courses.map((course) => (
-              <option key={String(course._id)} value={String(course._id)}>
-                {course.title}
-              </option>
-            ))}
-          </select>
-          <select name="status" defaultValue={status} className={selectClass} aria-label="Status">
-            <option value="">Not completed</option>
-            {STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {assignmentStatusLabel(value)}
-              </option>
-            ))}
-          </select>
-          <Button type="submit">Search</Button>
-        </form>
         {visible.length === 0 ? (
           <div className="rounded-lg border border-dashed border-neutral-300 px-6 py-10 text-center text-sm text-neutral-500 dark:border-slate-600 dark:text-neutral-300">
             No assignments match this search.

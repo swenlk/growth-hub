@@ -4,12 +4,10 @@ import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { StaffStatus } from "@/lib/domain";
 
 import type { StaffEditState } from "./actions";
-
-const selectClass =
-  "border-input dark:bg-input/30 h-8 w-full rounded-md border bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
 const emptyState: StaffEditState = { error: null, saved: false };
 
@@ -29,23 +27,28 @@ export function StaffEditForm({
   const [state, formAction, pending] = useActionState(action, emptyState);
 
   return (
-    <form action={formAction} className="max-w-3xl space-y-4">
+    <form action={formAction} className="space-y-4">
       <input type="hidden" name="staffId" value={staffId} />
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid items-start gap-4 lg:grid-cols-3">
         <label className="grid gap-2 text-sm font-medium">
-          Name
+          <span className="flex h-6 items-center">Name</span>
           <Input name="name" required maxLength={120} defaultValue={name} />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          Email
+          <span className="flex h-6 items-center">Email</span>
           <Input name="email" type="email" value={email} disabled readOnly />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          Status
-          <select name="status" defaultValue={status} className={selectClass}>
-            <option value="active">Active</option>
-            <option value="disabled">Inactive</option>
-          </select>
+          <span className="flex h-6 items-center">Status</span>
+          <SearchableSelect
+            name="status"
+            ariaLabel="Status"
+            defaultValue={status}
+            options={[
+              { value: "active", label: "Active" },
+              { value: "disabled", label: "Inactive" },
+            ]}
+          />
         </label>
       </div>
       {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}

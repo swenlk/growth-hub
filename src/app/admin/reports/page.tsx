@@ -1,7 +1,18 @@
+import { requireRole } from "@/lib/rbac";
+
+export const dynamic = "force-dynamic";
+
+export default async function ReportsPage() {
+  await requireRole("tenant_admin");
+  return null;
+}
+
+/*
 import type { Metadata } from "next";
 
 import { AssignmentFilters, AssignmentTable } from "@/components/dashboard/assignment-table";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { matchesAssignmentFilter, readAssignmentFilter } from "@/lib/assignment-view";
 import { listAssignments } from "@/lib/assignments";
 import { getTenantContext, requireRole } from "@/lib/rbac";
@@ -43,18 +54,16 @@ export default async function ReportsPage({
           {filter !== "all" ? <input type="hidden" name="filter" value={filter} /> : null}
           <label className="grid gap-2 text-sm font-medium">
             Course
-            <select
+            <SearchableSelect
               name="course"
+              ariaLabel="Course"
               defaultValue={courseId ?? ""}
-              className="border-input dark:bg-input/30 h-8 min-w-56 rounded-md border bg-transparent px-2.5 text-sm"
-            >
-              <option value="">All courses</option>
-              {courses.map((course) => (
-                <option key={course._id.toString()} value={course._id.toString()}>
-                  {course.title}
-                </option>
-              ))}
-            </select>
+              className="min-w-56"
+              options={[
+                { value: "", label: "All courses" },
+                ...courses.map((course) => ({ value: course._id.toString(), label: course.title })),
+              ]}
+            />
           </label>
           <button
             type="submit"
@@ -72,3 +81,4 @@ export default async function ReportsPage({
     </>
   );
 }
+*/

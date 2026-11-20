@@ -22,7 +22,7 @@ export default async function NewAssignmentPage() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Add assignment" text="Assign" />
+      <DashboardBreadcrumb title="Add assignment" text="Assign" backHref="/admin/assignments" />
       <div className="card !h-auto">
         <AssignForm
           action={assignCourseAction}

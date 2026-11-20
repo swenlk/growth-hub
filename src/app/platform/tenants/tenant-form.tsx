@@ -28,11 +28,11 @@ export function TenantCreateForm({
         </span>
       </label>
       <label className="grid gap-2 text-sm font-medium">
-        First admin name
+        Admin name
         <Input name="adminName" required maxLength={120} />
       </label>
       <label className="grid gap-2 text-sm font-medium">
-        First admin email
+        Admin email
         <Input name="adminEmail" type="email" required maxLength={254} />
       </label>
       {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}

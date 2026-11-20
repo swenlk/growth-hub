@@ -25,7 +25,7 @@ export default async function EditStaffPage({ params }: { params: Promise<{ id: 
 
   return (
     <>
-      <DashboardBreadcrumb title="Edit staff" text="Directory" />
+      <DashboardBreadcrumb title="Edit staff" text="Directory" backHref="/admin/staff" />
       <div className="card !h-auto">
         <StaffEditForm
           staffId={id}

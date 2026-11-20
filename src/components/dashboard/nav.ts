@@ -1,7 +1,7 @@
 import {
   BookOpen,
   Building2,
-  ChartPie,
+  // ChartPie,
   ClipboardList,
   GraduationCap,
   House,
@@ -32,13 +32,7 @@ export const NAV: Record<AppRole, DashNavItem[]> = {
     { title: "Staff", url: "/admin/staff", icon: UsersRound },
     { title: "Courses", url: "/admin/courses", icon: BookOpen },
     { title: "Assignments", url: "/admin/assignments", icon: ClipboardList },
-    { title: "Reports", url: "/admin/reports", icon: ChartPie },
+    // { title: "Reports", url: "/admin/reports", icon: ChartPie },
   ],
   staff: [{ title: "My training", url: "/learn", icon: GraduationCap }],
 };
-
-export function searchLinks(role: AppRole) {
-  return NAV[role].flatMap((item) =>
-    item.title && item.url ? [{ title: item.title, url: item.url }] : [],
-  );
-}

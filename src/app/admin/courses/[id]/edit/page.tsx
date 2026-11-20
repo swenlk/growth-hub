@@ -25,7 +25,7 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <DashboardBreadcrumb title="Edit course" text="Library" />
+      <DashboardBreadcrumb title="Edit course" text="Library" backHref="/admin/courses" />
       <div className="card !h-auto">
         <CourseEditForm
           courseId={id}

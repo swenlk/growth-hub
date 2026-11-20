@@ -21,11 +21,11 @@ export function DashboardShell({
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <DashboardSidebar role={role} />
-      <main className="dashboard-body-wrapper grow-[1] flex flex-col">
+      <main className="dashboard-body-wrapper flex min-h-svh grow-[1] flex-col">
         <SidebarInset>
           <DashboardHeader role={role} name={name} />
         </SidebarInset>
-        <div className="dashboard-body bg-neutral-100 dark:bg-[#1e2734] md:p-4 p-3 flex-1">{children}</div>
+        <div className="dashboard-body flex min-h-0 flex-1 flex-col bg-neutral-100 p-3 md:p-4 dark:bg-[#1e2734]">{children}</div>
         <Footer />
       </main>
     </SidebarProvider>

@@ -15,14 +15,14 @@ export function StaffCreateForm({
   const [state, formAction, pending] = useActionState(action, emptyAccountFormState);
 
   return (
-    <form action={formAction} className="max-w-3xl space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form action={formAction} className="space-y-4">
+      <div className="grid items-start gap-4 lg:grid-cols-3">
         <label className="grid gap-2 text-sm font-medium">
-          Name
+          <span className="flex h-6 items-center">Name</span>
           <Input name="name" required maxLength={120} />
         </label>
         <label className="grid gap-2 text-sm font-medium">
-          Email
+          <span className="flex h-6 items-center">Email</span>
           <Input name="email" type="email" required maxLength={254} />
         </label>
       </div>

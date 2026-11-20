@@ -16,7 +16,7 @@ export default async function NewCoursePage() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Add course" text="Library" />
+      <DashboardBreadcrumb title="Add course" text="Library" backHref="/admin/courses" />
       <div className="card !h-auto">
         <CourseCreateForm />
       </div>

@@ -105,45 +105,51 @@ export function CourseCreateForm() {
   const uploading = progress !== null;
 
   return (
-    <form onSubmit={onSubmit} className="relative max-w-3xl space-y-4">
-      <label className="grid gap-2 text-sm font-medium">
-        Title
-        <Input
-          name="title"
-          required
-          maxLength={200}
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          disabled={uploading}
-        />
-      </label>
-      <label className="grid gap-2 text-sm font-medium">
-        Description
-        <textarea
-          name="description"
-          maxLength={4000}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          disabled={uploading}
-          className={fieldClass}
-        />
-      </label>
-      <label className="grid gap-2 text-sm font-medium">
-        Video
-        <Input
-          name="video"
-          type="file"
-          accept="video/mp4,video/webm,.mp4,.webm"
-          required
-          onChange={onFile}
-          disabled={uploading}
-        />
-      </label>
+    <form onSubmit={onSubmit} className="relative space-y-4">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
+          <label className="grid gap-2 text-sm font-medium">
+            Title
+            <Input
+              name="title"
+              required
+              maxLength={200}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              disabled={uploading}
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            Description
+            <textarea
+              name="description"
+              maxLength={4000}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              disabled={uploading}
+              className={fieldClass}
+            />
+          </label>
+        </div>
+        <div className="grid content-start gap-2">
+          <label className="grid gap-2 text-sm font-medium">
+            Video
+            <Input
+              name="video"
+              type="file"
+              accept="video/mp4,video/webm,.mp4,.webm"
+              required
+              onChange={onFile}
+              disabled={uploading}
+            />
+          </label>
+          <p className="text-sm font-normal text-neutral-500 dark:text-neutral-300">
+            mp4 or webm. The length is read in the browser before upload.
+            {duration !== null ? ` Length ${formatDuration(duration)}.` : ""}
+          </p>
+        </div>
+      </div>
       <video ref={videoRef} preload="metadata" className="pointer-events-none absolute h-px w-px opacity-0" aria-hidden />
-      <p className="text-sm text-neutral-500 dark:text-neutral-300">
-        mp4 or webm. The length is read in the browser before upload.
-        {duration !== null ? ` Length ${formatDuration(duration)}.` : ""}
-      </p>
       {uploading ? (
         <div className="space-y-1">
           <div className="h-2 overflow-hidden rounded bg-neutral-200 dark:bg-slate-600">

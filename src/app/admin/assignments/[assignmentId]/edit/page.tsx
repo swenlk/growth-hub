@@ -40,7 +40,7 @@ export default async function EditAssignmentPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Edit assignment" text="Assign" />
+      <DashboardBreadcrumb title="Edit assignment" text="Assign" backHref="/admin/assignments" />
       <div className="card !h-auto">
         <AssignmentEditForm
           assignmentId={assignmentId}
