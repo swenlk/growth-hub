@@ -39,6 +39,7 @@ function isPathActive(pathname: string, url: string) {
   if (pathname === url) return true;
   // The admin index is the dashboard only. Child routes keep their own item active.
   if (url === "/admin") return false;
+  if (url === "/learn") return pathname.startsWith("/learn/assignments");
   return pathname.startsWith(`${url}/`);
 }
 

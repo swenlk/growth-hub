@@ -50,6 +50,17 @@ export const createStaffSchema = z
   })
   .strict();
 
+export const changeOwnPasswordSchema = z
+  .object({
+    newPassword: z.string().min(8, "Password must be at least 8 characters").max(128),
+    confirmPassword: z.string().min(1, "Confirm the new password").max(128),
+  })
+  .strict()
+  .refine((value) => value.newPassword === value.confirmPassword, {
+    message: "New password and confirmation do not match",
+    path: ["confirmPassword"],
+  });
+
 export const updateStaffSchema = z
   .object({
     name: z.string().trim().min(1).max(120),

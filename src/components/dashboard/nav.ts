@@ -5,6 +5,7 @@ import {
   ClipboardList,
   GraduationCap,
   House,
+  UserRound,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
@@ -34,5 +35,8 @@ export const NAV: Record<AppRole, DashNavItem[]> = {
     { title: "Assignments", url: "/admin/assignments", icon: ClipboardList },
     // { title: "Reports", url: "/admin/reports", icon: ChartPie },
   ],
-  staff: [{ title: "My training", url: "/learn", icon: GraduationCap }],
+  staff: [
+    { title: "My training", url: "/learn", icon: GraduationCap },
+    { title: "Profile", url: "/learn/profile", icon: UserRound },
+  ],
 };

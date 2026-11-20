@@ -200,14 +200,35 @@ async function assignRealmRole(userId: string, roleName: string) {
 }
 
 export async function setTemporaryPassword(userId: string, password: string) {
+  await resetPassword(userId, password, true, "Could not set a temporary password");
+}
+
+/** The password the person chose. It stays in place after the next sign-in. */
+export async function setAccountPassword(userId: string, password: string) {
+  await resetPassword(userId, password, false, "Could not update the password");
+}
+
+async function resetPassword(userId: string, password: string, temporary: boolean, fallback: string) {
   const parsed = z.string().min(8).max(128).parse(password);
   const config = settings();
-  const response = await adminFetch(`/admin/realms/${config.realm}/users/${userId}/reset-password`, {
-    method: "PUT",
-    body: JSON.stringify({ type: "password", value: parsed, temporary: true }),
-  });
+  const response = await adminFetch(
+    `/admin/realms/${config.realm}/users/${encodeURIComponent(userId)}/reset-password`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ type: "password", value: parsed, temporary }),
+    },
+  );
   if (!response.ok) {
-    throw new KeycloakAdminError(await errorMessage(response, "Could not set a temporary password"), response.status);
+    throw new KeycloakAdminError(await passwordError(response, fallback), response.status);
+  }
+}
+
+async function passwordError(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await response.json()) as { errorMessage?: string; error_description?: string };
+    return body.errorMessage || body.error_description || fallback;
+  } catch {
+    return fallback;
   }
 }
 

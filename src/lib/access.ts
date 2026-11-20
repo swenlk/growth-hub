@@ -57,7 +57,11 @@ export function canAccess(pathname: string, roles: AppRole[]): boolean {
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
     return roles.includes("tenant_admin");
   }
-  if (pathname.startsWith("/learn") || pathname.startsWith("/api/assignments")) {
+  if (
+    pathname.startsWith("/learn") ||
+    pathname.startsWith("/api/learn") ||
+    pathname.startsWith("/api/assignments")
+  ) {
     return roles.includes("staff");
   }
   if (pathname.startsWith("/api/media")) {

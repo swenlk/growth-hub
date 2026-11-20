@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { TrackedVideoPlayer } from "@/components/TrackedVideoPlayer";
@@ -32,14 +31,9 @@ export default async function AssignmentPlayerPage({
 
   return (
     <>
-      <DashboardBreadcrumb title={course.title} text="Watch" />
+      <DashboardBreadcrumb title={course.title} text="Watch" backHref="/learn" />
       <div className="card">
-        <p className="text-sm text-neutral-500 dark:text-neutral-300">
-          <Link href="/learn" className="text-primary">
-            My training
-          </Link>
-        </p>
-        <h6 className="mt-2 text-lg font-semibold">{course.title}</h6>
+        <h6 className="text-lg font-semibold">{course.title}</h6>
         <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-300">
           {assignment.dueDate ? `Due ${formatDay(assignment.dueDate)}` : "No due date"}
           {assignment.completedAt ? ` · Completed ${formatDay(assignment.completedAt)}` : ""}
