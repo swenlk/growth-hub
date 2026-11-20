@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign in</title>
-    <link rel="icon" href="${url.resourcesPath}/img/logo.png" />
+    <link rel="icon" href="${url.resourcesPath}/img/favicon.ico?v=gh" />
     <link href="${url.resourcesPath}/css/login.css" rel="stylesheet" />
 </head>
 <body>
@@ -13,7 +13,7 @@
     <div class="art" aria-hidden="true"></div>
     <main class="panel">
         <div class="panel-inner">
-            <img class="logo" src="${url.resourcesPath}/img/logo.png" alt="Growth Hub" />
+            <img class="logo" src="${url.resourcesPath}/img/logo.png?v=gh" alt="Growth Hub" />
             <#if auth?has_content && auth.showUsername() && !auth.showResetCredentials()>
                 <#nested "show-username">
                 <div id="kc-username">

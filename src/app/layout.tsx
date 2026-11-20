@@ -17,6 +17,9 @@ export const metadata: Metadata = {
     template: "%s · Training",
   },
   description: "Tenant-based staff training",
+  icons: {
+    icon: "/assets/images/favicon.ico",
+  },
 };
 
 export default function RootLayout({
