@@ -10,9 +10,9 @@
 -- loopback-only server; if Keycloak cannot connect, this is the first place
 -- to check.
 
-CREATE DATABASE IF NOT EXISTS keycloak CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `growth-hub` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE USER IF NOT EXISTS 'keycloak'@'%' IDENTIFIED BY 'change-me';
+CREATE USER IF NOT EXISTS 'growth-hub'@'%' IDENTIFIED BY 'GrowthHub@123';
 
-GRANT ALL PRIVILEGES ON keycloak.* TO 'keycloak'@'%';
+GRANT ALL PRIVILEGES ON `growth-hub`.* TO 'growth-hub'@'%';
 FLUSH PRIVILEGES;

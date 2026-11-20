@@ -56,7 +56,7 @@ Edit the password in `scripts/mysql-setup.sql` so it matches `KC_DB_PASSWORD`, t
 & "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p < scripts\mysql-setup.sql
 ```
 
-This creates database `keycloak` and user `keycloak`@`%`. Compose uses that database unless `KC_DB_URL_DATABASE` is set.
+This creates database `growth-hub` and user `keycloak`@`%`. Compose uses that database unless `KC_DB_URL_DATABASE` is set.
 
 MySQL must accept connections from Docker, not only from `127.0.0.1`. In `my.ini`, `bind-address` should be `0.0.0.0` or `*`. Restart MySQL after changing it. If Keycloak logs that it cannot reach MySQL, this is the usual cause. MongoDB has the same requirement when `web` runs in Compose: it must listen on an interface Docker can reach.
 
@@ -68,7 +68,7 @@ Copy `.env.example` to `.env.local` if you do not already have one. Set at least
 - `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD` (first Keycloak admin; `KEYCLOAK_ADMIN_USERNAME` is also accepted)
 - `AUTH_SECRET` (any long random string; required when the `web` container starts)
 
-`KEYCLOAK_ADMIN_PASSWORD` is only for the first Keycloak boot. After an admin user exists, changing it in the env file does not reset the password. Keycloak 26.8 only accepts Admin API tokens that include the built-in `kc-admin-api` client scope. `npm run setup:keycloak` assigns that scope to `training-admin-svc`.
+`KEYCLOAK_ADMIN_PASSWORD` is only for the first Keycloak boot. After an admin user exists, changing it in the env file does not reset the password. Keycloak 26.8 only accepts Admin API tokens that include the built-in `kc-admin-api` client scope. `npm run setup:keycloak` assigns that scope to `growth-hub-admin`.
 
 ### 3. Keycloak only (day-to-day dev)
 
@@ -109,9 +109,9 @@ The `web` service forces `KEYCLOAK_INTERNAL_URL=http://keycloak:8080`. Do not po
 
 ### Issuer URL
 
-`KC_HOSTNAME=http://localhost:8080` makes Keycloak advertise that URL as the issuer (`http://localhost:8080/realms/training`). The browser can use it. The `web` container cannot, because `localhost` inside that container is not Keycloak.
+`KC_HOSTNAME=http://localhost:8080` makes Keycloak advertise that URL as the issuer (`http://localhost:8080/realms/growth-hub`). The browser can use it. The `web` container cannot, because `localhost` inside that container is not Keycloak.
 
-`KEYCLOAK_ISSUER` stays on the public URL (`http://localhost:8080/realms/training`). That is the address the browser opens and the `iss` claim in tokens. Server-side Auth.js fetches (discovery, token, refresh, JWKS) are rewritten to `KEYCLOAK_INTERNAL_URL`. In Compose that is `http://keycloak:8080`. On the host it is `http://localhost:8080`. `KC_HOSTNAME_STRICT=false` lets those internal requests through.
+`KEYCLOAK_ISSUER` stays on the public URL (`http://localhost:8080/realms/growth-hub`). That is the address the browser opens and the `iss` claim in tokens. Server-side Auth.js fetches (discovery, token, refresh, JWKS) are rewritten to `KEYCLOAK_INTERNAL_URL`. In Compose that is `http://keycloak:8080`. On the host it is `http://localhost:8080`. `KC_HOSTNAME_STRICT=false` lets those internal requests through.
 
 ## Sign in
 
@@ -121,10 +121,10 @@ There is one Sign in button. The home page does not offer a separate entrance pe
 - `tenant_admin` to `/admin`
 - `staff` to `/learn`
 
-The first platform account is still created in the Keycloak `training` realm with the `super_admin` role. After that, sign in and create an organization on Tenants. The page shows the first admin's temporary password once. That admin signs in through the same button and lands on the organization dashboard, where they add staff the same way.
+The first platform account is still created in the Keycloak `growth-hub` realm with the `super_admin` role. After that, sign in and create an organization on Tenants. The page shows the first admin's temporary password once. That admin signs in through the same button and lands on the organization dashboard, where they add staff the same way.
 
 Visiting another role's area sends you back to your own home. `/api/auth` and `/api/health` stay reachable without a session. Other `/api` routes return 401 until you are signed in. The session carries `sub`, `roles`, and `tenantId` from the token. Tenant-scoped code must use `requireTenant()` and must not trust a tenant id sent by the browser.
 
-The `training` realm allows HTTP (`sslRequired=NONE`) so the container can call Keycloak without TLS. That is a local development setting. Production must terminate TLS and require HTTPS.
+The `growth-hub` realm allows HTTP (`sslRequired=NONE`) so the container can call Keycloak without TLS. That is a local development setting. Production must terminate TLS and require HTTPS.
 
 Keycloak 26 includes Organizations. This project keeps one realm and a `tenantId` user attribute. Moving to Organizations is a later upgrade, not the current model.

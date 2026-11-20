@@ -1,28 +1,16 @@
-# Two services only. MySQL and MongoDB run on the host.
-# Compose reads variables from the shell or a .env file next to this file.
-# Next.js reads .env.local, so pass it explicitly:
-#   docker compose --env-file .env.local up
-
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.2
     command: start-dev
-    # Production, after a custom image built with `kc.sh build` and TLS in front:
-    # command: start --optimized
-    # Set KC_HOSTNAME to the public https URL, keep KC_PROXY_HEADERS=xforwarded,
-    # and set KC_HTTP_ENABLED=true only when a proxy terminates TLS.
     environment:
       KC_DB: mysql
-      # allowPublicKeyRetrieval is required by MySQL 8 caching_sha2_password over a non-TLS dev connection.
-      # Default database name is keycloak. Set KC_DB_URL_DATABASE to use another existing schema.
-      KC_DB_URL: "jdbc:mysql://host.docker.internal:3306/${KC_DB_URL_DATABASE:-keycloak}?characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true"
-      KC_DB_USERNAME: ${KC_DB_USERNAME:-keycloak}
-      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?Set KC_DB_PASSWORD}
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-${KEYCLOAK_ADMIN_USERNAME:-admin}}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB_URL: "jdbc:mysql://host.docker.internal:3306/${KC_DB_URL_DATABASE}?characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true"
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HTTP_ENABLED: "true"
       KC_HTTP_PORT: "8080"
-      # Browser and token issuer stay on localhost. The Next container calls http://keycloak:8080.
       KC_HOSTNAME: http://localhost:8080
       KC_HOSTNAME_STRICT: "false"
       KC_HEALTH_ENABLED: "true"
@@ -49,16 +37,15 @@ services:
   web:
     build: .
     environment:
-      MONGODB_URI: mongodb://host.docker.internal:27017/training_platform
-      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
-      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET}
-      # Public issuer. Auth.js must keep this value even when it calls the internal URL below.
-      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-http://localhost:8080/realms/training}
+      MONGODB_URI: mongodb://host.docker.internal:27017/growth_hub
+      AUTH_URL: ${AUTH_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
-      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-training-web}
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
-      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-training-admin-svc}
-      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
       MEDIA_DIR: /app/media
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -69,8 +56,3 @@ services:
       - "3000:3000"
     volumes:
       - ./media:/app/media
-      # Named volume alternative. Replace the bind mount above and uncomment the top-level volume.
-      # - training-media:/app/media
-
-# volumes:
-#   training-media:

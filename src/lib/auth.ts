@@ -28,9 +28,9 @@ function issuerOrigin(issuer: string): string {
 function realmFromIssuer(issuer: string): string {
   try {
     const match = new URL(issuer).pathname.match(/\/realms\/([^/]+)/);
-    return match?.[1] ? decodeURIComponent(match[1]) : "training";
+    return match?.[1] ? decodeURIComponent(match[1]) : "growth-hub";
   } catch {
-    return "training";
+    return "growth-hub";
   }
 }
 
@@ -72,7 +72,7 @@ function decodeJwtPayload(jwt: string): Record<string, unknown> {
 }
 
 async function refreshKeycloakToken(refreshToken: string): Promise<TokenResponse> {
-  const issuer = requiredEnv("KEYCLOAK_ISSUER", "http://localhost:8080/realms/training");
+  const issuer = requiredEnv("KEYCLOAK_ISSUER", "http://localhost:8080/realms/growth-hub");
   const internalBase = requiredEnv("KEYCLOAK_INTERNAL_URL", issuerOrigin(issuer)).replace(/\/$/, "");
   const realm = realmFromIssuer(issuer);
   const body = new URLSearchParams({
@@ -98,7 +98,7 @@ async function refreshKeycloakToken(refreshToken: string): Promise<TokenResponse
   return (await response.json()) as TokenResponse;
 }
 
-const issuer = requiredEnv("KEYCLOAK_ISSUER", "http://localhost:8080/realms/training");
+const issuer = requiredEnv("KEYCLOAK_ISSUER", "http://localhost:8080/realms/growth-hub");
 const internalBase = requiredEnv("KEYCLOAK_INTERNAL_URL", issuerOrigin(issuer)).replace(/\/$/, "");
 const publicOrigin = issuerOrigin(issuer);
 

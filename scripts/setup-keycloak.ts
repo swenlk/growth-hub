@@ -1,5 +1,5 @@
 /**
- * Idempotent Keycloak bootstrap for the single `training` realm.
+ * Idempotent Keycloak bootstrap for the single `growth-hub` realm.
  * Run on the host after Keycloak is healthy:
  *   npm run setup:keycloak
  */
@@ -8,9 +8,9 @@ import { resolve } from "node:path";
 
 import { z } from "zod";
 
-const REALM = "training";
-const WEB_CLIENT_ID = "training-web";
-const ADMIN_CLIENT_ID = "training-admin-svc";
+const REALM = "growth-hub";
+const WEB_CLIENT_ID = "growth-hub-web";
+const ADMIN_CLIENT_ID = "growth-hub-admin";
 const REALM_ROLES = ["super_admin", "tenant_admin", "staff"] as const;
 const SERVICE_ACCOUNT_ROLES = ["manage-users", "view-users", "query-users", "view-realm"] as const;
 
@@ -410,7 +410,7 @@ async function main() {
 
   const webClientId = await ensureClient(request, {
     clientId: WEB_CLIENT_ID,
-    name: "Training web",
+    name: "Growth Hub web",
     enabled: true,
     protocol: "openid-connect",
     publicClient: false,
@@ -429,7 +429,7 @@ async function main() {
 
   const adminClientId = await ensureClient(request, {
     clientId: ADMIN_CLIENT_ID,
-    name: "Training admin service",
+    name: "Growth Hub admin",
     enabled: true,
     protocol: "openid-connect",
     publicClient: false,
@@ -475,7 +475,7 @@ async function main() {
   const adminSecret = await clientSecret(request, adminClientId);
 
   console.log("");
-  console.log("Realm `training` is ready. Put these values in .env.local:");
+  console.log("Realm `growth-hub` is ready. Put these values in .env.local:");
   console.log("");
   console.log(`KEYCLOAK_ISSUER=${env.baseUrl}/realms/${REALM}`);
   console.log(`KEYCLOAK_CLIENT_ID=${WEB_CLIENT_ID}`);

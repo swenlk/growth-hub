@@ -12,11 +12,11 @@ function appOrigin(): string {
 export async function POST(request: NextRequest) {
   const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
   const idToken = typeof token?.idToken === "string" ? token.idToken : "";
-  const issuer = (process.env.KEYCLOAK_ISSUER ?? "http://localhost:8080/realms/training").replace(
+  const issuer = (process.env.KEYCLOAK_ISSUER ?? "http://localhost:8080/realms/growth-hub").replace(
     /\/$/,
     "",
   );
-  const clientId = process.env.KEYCLOAK_CLIENT_ID?.trim() || "training-web";
+  const clientId = process.env.KEYCLOAK_CLIENT_ID?.trim() || "growth-hub-web";
 
   const logoutUrl = new URL(`${issuer}/protocol/openid-connect/logout`);
   logoutUrl.searchParams.set("client_id", clientId);
