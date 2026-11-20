@@ -10,6 +10,7 @@ import {
   disableUser,
   enableUser,
   KeycloakAdminError,
+  setTemporaryPassword,
   updateStaffAccount,
 } from "@/lib/keycloak-admin";
 import type { TenantContext } from "@/lib/rbac";
@@ -89,7 +90,7 @@ export async function createStaffMember(
   return { email: parsed.email, temporaryPassword: password };
 }
 
-/** Name and status are saved together. Email stays the sign-in identity. */
+/** Name, status, and an optional new sign-in password are saved together. Email stays the sign-in identity. */
 export async function updateStaffMember(ctx: Pick<TenantContext, "models">, staffId: string, input: UpdateStaffInput) {
   const parsed = updateStaffSchema.parse(input);
   const staff = await ctx.models.Staff.findById(staffId);
@@ -99,26 +100,40 @@ export async function updateStaffMember(ctx: Pick<TenantContext, "models">, staf
   if (staff.keycloakUserId.startsWith("pending:")) {
     throw new StaffDirectoryError("This person is not linked to a sign-in account");
   }
-  if (staff.name === parsed.name && staff.status === parsed.status) return;
 
-  const previous = { name: staff.name, enabled: staff.status === "active" };
-  try {
-    await updateStaffAccount(staff.keycloakUserId, {
-      name: parsed.name,
-      enabled: parsed.status === "active",
-    });
-  } catch (error) {
-    if (error instanceof KeycloakAdminError) throw new StaffDirectoryError(error.message);
-    throw error;
+  const password = parsed.password;
+  const profileChanged = staff.name !== parsed.name || staff.status !== parsed.status;
+  if (!profileChanged && password.length === 0) return;
+
+  if (profileChanged) {
+    const previous = { name: staff.name, enabled: staff.status === "active" };
+    try {
+      await updateStaffAccount(staff.keycloakUserId, {
+        name: parsed.name,
+        enabled: parsed.status === "active",
+      });
+    } catch (error) {
+      if (error instanceof KeycloakAdminError) throw new StaffDirectoryError(error.message);
+      throw error;
+    }
+
+    try {
+      staff.name = parsed.name;
+      staff.status = parsed.status;
+      await staff.save();
+    } catch (error) {
+      await updateStaffAccount(staff.keycloakUserId, previous).catch(() => undefined);
+      throw error;
+    }
   }
 
-  try {
-    staff.name = parsed.name;
-    staff.status = parsed.status;
-    await staff.save();
-  } catch (error) {
-    await updateStaffAccount(staff.keycloakUserId, previous).catch(() => undefined);
-    throw error;
+  if (password.length > 0) {
+    try {
+      await setTemporaryPassword(staff.keycloakUserId, password);
+    } catch (error) {
+      if (error instanceof KeycloakAdminError) throw new StaffDirectoryError(error.message);
+      throw error;
+    }
   }
 }
 

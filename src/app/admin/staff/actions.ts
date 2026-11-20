@@ -47,6 +47,7 @@ export async function updateStaffAction(
   const parsed = updateStaffSchema.safeParse({
     name: formData.get("name"),
     status: formData.get("status"),
+    password: formData.get("password") ?? "",
   });
   if (!staffId.success || !parsed.success) {
     return { error: parsed.success ? "That staff update is not valid" : (parsed.error.issues[0]?.message ?? "Check the form"), saved: false };

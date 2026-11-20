@@ -54,6 +54,11 @@ export const updateStaffSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
     status: staffStatusSchema,
+    password: z
+      .string()
+      .trim()
+      .max(128)
+      .refine((value) => value.length === 0 || value.length >= 8, "Password must be at least 8 characters"),
   })
   .strict();
 
