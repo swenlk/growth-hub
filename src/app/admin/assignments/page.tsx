@@ -12,38 +12,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { assignmentStatusLabel, formatDay, isOverdue, watchedPercent } from "@/lib/assignment-view";
 import { listAssignments } from "@/lib/assignments";
 import type { AssignmentStatus } from "@/lib/domain";
+import { readChoice, readObjectId, withListQuery } from "@/lib/list-search";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 
 const pageSize = 10;
 
 const STATUSES: AssignmentStatus[] = ["assigned", "in_progress", "completed"];
 
-function readQuery(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function readId(value: string | string[] | undefined) {
-  const raw = readQuery(value)?.trim() ?? "";
-  return /^[a-f\d]{24}$/i.test(raw) ? raw : "";
-}
-
-function readStatus(value: string | string[] | undefined): AssignmentStatus | "" {
-  const raw = readQuery(value);
-  if (raw === "assigned" || raw === "in_progress" || raw === "completed") return raw;
-  return "";
-}
-
-function assignmentPageHref(
-  page: number,
-  search: { staffId: string; courseId: string; status: AssignmentStatus | "" },
+function assignmentListHref(
+  search: { staffId: string; courseId: string; status: AssignmentStatus | ""; page: number },
+  path = "/admin/assignments",
 ) {
-  const params = new URLSearchParams();
-  if (search.staffId) params.set("staff", search.staffId);
-  if (search.courseId) params.set("course", search.courseId);
-  if (search.status) params.set("status", search.status);
-  if (page > 1) params.set("page", String(page));
-  const query = params.toString();
-  return query ? `/admin/assignments?${query}` : "/admin/assignments";
+  return withListQuery(path, {
+    staff: search.staffId,
+    course: search.courseId,
+    status: search.status,
+    page: search.page > 1 ? search.page : 0,
+  });
 }
 
 export const metadata: Metadata = {
@@ -60,9 +45,9 @@ export default async function AssignmentsPage({
   await requireRole("tenant_admin");
   const { models } = await getTenantContext();
   const query = await searchParams;
-  const staffId = readId(query.staff);
-  const courseId = readId(query.course);
-  const status = readStatus(query.status);
+  const staffId = readObjectId(query.staff);
+  const courseId = readObjectId(query.course);
+  const status = readChoice(query.status, STATUSES);
   const requested = Number(query.page);
   const [assignments, staff, courses] = await Promise.all([
     listAssignments(models),
@@ -164,7 +149,13 @@ export default async function AssignmentsPage({
                     <TableCell className={cell}>{formatDay(row.completedAt)}</TableCell>
                     <TableCell className={cell}>
                       <Button asChild size="icon" variant="outline" className="size-8">
-                        <Link href={`/admin/assignments/${row.assignmentId}/edit`} aria-label={`Edit ${row.staffName}`}>
+                        <Link
+                          href={assignmentListHref(
+                            { staffId, courseId, status, page },
+                            `/admin/assignments/${row.assignmentId}/edit`,
+                          )}
+                          aria-label={`Edit ${row.staffName}`}
+                        >
                           <Pencil />
                         </Link>
                       </Button>
@@ -181,7 +172,7 @@ export default async function AssignmentsPage({
           total={total}
           start={start}
           end={end}
-          hrefFor={(number) => assignmentPageHref(number, { staffId, courseId, status })}
+          hrefFor={(number) => assignmentListHref({ staffId, courseId, status, page: number })}
         />
       </div>
     </>

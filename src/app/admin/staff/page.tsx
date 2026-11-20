@@ -11,32 +11,18 @@ import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { StaffStatus } from "@/lib/domain";
+import { readChoice, readText, withListQuery } from "@/lib/list-search";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 
 const pageSize = 10;
-
-function readText(value: string | string[] | undefined) {
-  const raw = (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
-  return raw.slice(0, 120);
-}
-
-function readStaffStatus(value: string | string[] | undefined): StaffStatus | "" {
-  const raw = Array.isArray(value) ? value[0] : value;
-  if (raw === "active" || raw === "disabled") return raw;
-  return "";
-}
+const STAFF_STATUSES = ["active", "disabled"] as const;
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function staffPageHref(page: number, search: { q: string; status: StaffStatus | "" }) {
-  const params = new URLSearchParams();
-  if (search.q) params.set("q", search.q);
-  if (search.status) params.set("status", search.status);
-  if (page > 1) params.set("page", String(page));
-  const query = params.toString();
-  return query ? `/admin/staff?${query}` : "/admin/staff";
+function staffListHref(search: { q: string; status: StaffStatus | ""; page: number }, path = "/admin/staff") {
+  return withListQuery(path, { q: search.q, status: search.status, page: search.page > 1 ? search.page : 0 });
 }
 
 export const metadata: Metadata = {
@@ -54,7 +40,7 @@ export default async function StaffListPage({
   const { models } = await getTenantContext();
   const query = await searchParams;
   const q = readText(query.q);
-  const status = readStaffStatus(query.status);
+  const status = readChoice(query.status, STAFF_STATUSES);
   const requested = Number(query.page);
   const filter: Record<string, unknown> = {};
   if (status) filter.status = status;
@@ -128,7 +114,10 @@ export default async function StaffListPage({
                     </TableCell>
                     <TableCell className={cell}>
                       <Button asChild size="icon" variant="outline" className="size-8">
-                        <Link href={`/admin/staff/${person._id.toString()}/edit`} aria-label={`Edit ${person.name}`}>
+                        <Link
+                          href={staffListHref({ q, status, page }, `/admin/staff/${person._id.toString()}/edit`)}
+                          aria-label={`Edit ${person.name}`}
+                        >
                           <Pencil />
                         </Link>
                       </Button>
@@ -145,7 +134,7 @@ export default async function StaffListPage({
           total={total}
           start={start}
           end={end}
-          hrefFor={(number) => staffPageHref(number, { q, status })}
+          hrefFor={(number) => staffListHref({ q, status, page: number })}
         />
       </div>
     </>

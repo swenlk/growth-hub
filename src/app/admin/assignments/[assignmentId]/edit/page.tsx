@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { formatDay } from "@/lib/assignment-view";
+import type { AssignmentStatus } from "@/lib/domain";
+import { readChoice, readObjectId, readPage, withListQuery } from "@/lib/list-search";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 
 import { updateAssignmentAction } from "../../actions";
@@ -15,12 +17,17 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+const ASSIGNMENT_STATUSES = ["assigned", "in_progress", "completed"] as const satisfies readonly AssignmentStatus[];
+
 export default async function EditAssignmentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ assignmentId: string }>;
+  searchParams: Promise<{ staff?: string; course?: string; status?: string; page?: string }>;
 }) {
   const { assignmentId } = await params;
+  const query = await searchParams;
   if (!z.string().uuid().safeParse(assignmentId).success) notFound();
 
   await requireRole("tenant_admin");
@@ -40,7 +47,16 @@ export default async function EditAssignmentPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Edit assignment" text="Assign" backHref="/admin/assignments" />
+      <DashboardBreadcrumb
+        title="Edit assignment"
+        text="Assign"
+        backHref={withListQuery("/admin/assignments", {
+          staff: readObjectId(query.staff),
+          course: readObjectId(query.course),
+          status: readChoice(query.status, ASSIGNMENT_STATUSES),
+          page: readPage(query.page),
+        })}
+      />
       <div className="card !h-auto">
         <AssignmentEditForm
           assignmentId={assignmentId}
