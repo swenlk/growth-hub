@@ -58,7 +58,6 @@ services:
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-training-admin-svc}
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-}
       MEDIA_DIR: /app/media
-      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-500}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

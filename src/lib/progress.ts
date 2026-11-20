@@ -89,6 +89,49 @@ export function continuousSpan(
   return { from: roundSeconds(from), to: roundSeconds(to) };
 }
 
+export type PlaybackSample = "credit" | "still" | "seek";
+
+/**
+ * Classify one playback sample.
+ * A forward move that fits the wall clock is watched time.
+ * A duplicate timestamp or a tiny backward jitter is ignored.
+ * A jump further than the wall clock allows is a seek and does not count.
+ */
+export function playbackCredit(
+  from: number,
+  to: number,
+  elapsedSeconds: number,
+  playbackRate = 1,
+): PlaybackSample {
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !Number.isFinite(elapsedSeconds)) return "still";
+  const delta = to - from;
+  if (delta < -0.3) return "seek";
+  if (delta <= 0.05) return "still";
+  const rate = Math.min(Math.max(playbackRate, 1), MAX_PLAYBACK_RATE);
+  const allowed = Math.max(0, elapsedSeconds) * rate + 0.5;
+  if (delta <= allowed) return "credit";
+  return "seek";
+}
+
+/**
+ * Continue at the saved playhead when it still sits inside watched coverage.
+ * A playhead past that coverage is a previous seek, so start at the first unwatched second.
+ */
+export function resumeSeconds(ranges: WatchedRange[], lastPosition: number, durationSeconds: number): number {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return 0;
+  const position = Number.isFinite(lastPosition) ? Math.min(Math.max(lastPosition, 0), durationSeconds) : 0;
+  const merged = mergeRanges(ranges);
+  const inside = merged.some(([start, end]) => position >= start - 0.25 && position <= end + 1);
+  if (inside && position > 1 && position < durationSeconds - 0.5) return roundSeconds(position);
+  let cursor = 0;
+  for (const [start, end] of merged) {
+    if (start > cursor + 0.5) break;
+    cursor = Math.max(cursor, end);
+  }
+  if (cursor > 1 && cursor < durationSeconds - 0.5) return roundSeconds(cursor);
+  return 0;
+}
+
 export function allowedWatchSeconds(lastHeartbeatAt: Date | undefined, now: Date): number {
   if (!lastHeartbeatAt) {
     return HEARTBEAT_INTERVAL_SECONDS * PLAYBACK_RATE_LIMIT + HEARTBEAT_SLACK_SECONDS;

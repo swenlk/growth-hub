@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { maxUploadBytes } from "@/lib/media";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 import { objectIdSchema } from "@/lib/validators";
 
@@ -34,7 +33,6 @@ export default async function EditCoursePage({ params }: { params: Promise<{ id:
           description={course.description ?? ""}
           status={course.status}
           fileName={course.video.originalFileName}
-          maxBytes={maxUploadBytes()}
           action={updateCourseAction}
         />
       </div>

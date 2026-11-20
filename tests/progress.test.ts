@@ -8,6 +8,8 @@ import {
   completeAssignment,
   continuousSpan,
   mergeRanges,
+  playbackCredit,
+  resumeSeconds,
   sumRanges,
   type AssignmentWatch,
 } from "../src/lib/progress";
@@ -138,6 +140,20 @@ function main() {
   assert.equal(updated[1]?.progress.watchedSeconds, 0);
   assert.equal(updated[1]?.status, "assigned");
   assert.equal(first.progress.watchedSeconds, 0);
+
+  assert.equal(playbackCredit(70, 70.25, 0.25, 1), "credit");
+  assert.equal(playbackCredit(70, 71, 0.5, 2), "credit");
+  assert.equal(playbackCredit(70, 70.02, 0.25, 1), "still");
+  assert.equal(playbackCredit(70, 69.9, 0.25, 1), "still");
+  assert.equal(playbackCredit(70, 69, 0.25, 1), "seek");
+  assert.equal(playbackCredit(70, 170, 0.25, 1), "seek");
+
+  assert.equal(resumeSeconds([[0, 70]], 174, 174), 70);
+  assert.equal(resumeSeconds([[0, 70]], 70, 174), 70);
+  assert.equal(resumeSeconds([[0, 30], [50, 80]], 80, 174), 80);
+  assert.equal(resumeSeconds([[0, 30], [50, 80]], 120, 174), 30);
+  assert.equal(resumeSeconds([[0, 174]], 174, 174), 0);
+  assert.equal(resumeSeconds([], 0, 174), 0);
 
   console.log("progress tests passed");
 }

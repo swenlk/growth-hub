@@ -24,7 +24,6 @@ export function CourseEditForm({
   description,
   status,
   fileName,
-  maxBytes,
   action,
 }: {
   courseId: string;
@@ -32,7 +31,6 @@ export function CourseEditForm({
   description: string;
   status: CourseStatus;
   fileName: string;
-  maxBytes: number;
   action: (previous: CourseEditState, formData: FormData) => Promise<CourseEditState>;
 }) {
   const router = useRouter();
@@ -43,7 +41,6 @@ export function CourseEditForm({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [replaced, setReplaced] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
-  const limitLabel = formatLimit(maxBytes);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -97,12 +94,6 @@ export function CourseEditForm({
       setFile(null);
       event.target.value = "";
       setUploadError("Use an mp4 or webm video");
-      return;
-    }
-    if (next.size > maxBytes) {
-      setFile(null);
-      event.target.value = "";
-      setUploadError(`That video is larger than ${limitLabel} MB`);
       return;
     }
     setFile(next);
@@ -174,7 +165,7 @@ export function CourseEditForm({
       </label>
       <video ref={videoRef} preload="metadata" className="pointer-events-none absolute h-px w-px opacity-0" aria-hidden />
       <p className="text-sm text-neutral-500 dark:text-neutral-300">
-        Current file: {fileName}. Choose a new mp4 or webm, up to {limitLabel} MB, to replace it.
+        Current file: {fileName}. Choose a new mp4 or webm file to replace it.
         {duration !== null ? ` New length ${formatDuration(duration)}.` : ""}
       </p>
       {uploading ? (
@@ -192,11 +183,6 @@ export function CourseEditForm({
       </Button>
     </form>
   );
-}
-
-function formatLimit(bytes: number): string {
-  const mb = bytes / (1024 * 1024);
-  return Number.isInteger(mb) ? String(mb) : mb.toFixed(1);
 }
 
 function putCourse(url: string, body: FormData, onProgress: (ratio: number) => void): Promise<void> {

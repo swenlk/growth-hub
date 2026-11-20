@@ -10,7 +10,7 @@ import { formatDuration } from "@/lib/format";
 const fieldClass =
   "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex min-h-24 w-full rounded-md border bg-transparent px-2.5 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]";
 
-export function CourseCreateForm({ maxBytes }: { maxBytes: number }) {
+export function CourseCreateForm() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [title, setTitle] = useState("");
@@ -19,8 +19,6 @@ export function CourseCreateForm({ maxBytes }: { maxBytes: number }) {
   const [duration, setDuration] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
-
-  const limitLabel = formatLimit(maxBytes);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -73,12 +71,6 @@ export function CourseCreateForm({ maxBytes }: { maxBytes: number }) {
       setFile(null);
       event.target.value = "";
       setError("Use an mp4 or webm video");
-      return;
-    }
-    if (next.size > maxBytes) {
-      setFile(null);
-      event.target.value = "";
-      setError(`That video is larger than ${limitLabel} MB`);
       return;
     }
     setFile(next);
@@ -149,7 +141,7 @@ export function CourseCreateForm({ maxBytes }: { maxBytes: number }) {
       </label>
       <video ref={videoRef} preload="metadata" className="pointer-events-none absolute h-px w-px opacity-0" aria-hidden />
       <p className="text-sm text-neutral-500 dark:text-neutral-300">
-        mp4 or webm, up to {limitLabel} MB. The length is read in the browser before upload.
+        mp4 or webm. The length is read in the browser before upload.
         {duration !== null ? ` Length ${formatDuration(duration)}.` : ""}
       </p>
       {uploading ? (
@@ -166,11 +158,6 @@ export function CourseCreateForm({ maxBytes }: { maxBytes: number }) {
       </Button>
     </form>
   );
-}
-
-function formatLimit(bytes: number): string {
-  const mb = bytes / (1024 * 1024);
-  return Number.isInteger(mb) ? String(mb) : mb.toFixed(1);
 }
 
 function postCourse(body: FormData, onProgress: (ratio: number) => void): Promise<string> {

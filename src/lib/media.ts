@@ -12,8 +12,6 @@ import { courseDetailsSchema } from "@/lib/validators";
 const STORED_FILE_NAME =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp4|webm)$/;
 
-const DEFAULT_MAX_BYTES = 500 * 1024 * 1024;
-
 export class MediaError extends Error {
   readonly status: 400 | 413 | 404 | 500;
 
@@ -45,16 +43,6 @@ type Container = "mp4" | "webm";
 export function mediaRoot(): string {
   const configured = process.env.MEDIA_DIR?.trim();
   return path.resolve(configured && configured.length > 0 ? configured : path.join(process.cwd(), "media"));
-}
-
-export function maxUploadBytes(): number {
-  const raw = process.env.MAX_UPLOAD_MB?.trim();
-  if (!raw) return DEFAULT_MAX_BYTES;
-  const mb = Number(raw);
-  if (!Number.isFinite(mb) || mb <= 0 || mb > 4096) {
-    throw new Error("MAX_UPLOAD_MB must be a number from 1 to 4096");
-  }
-  return Math.floor(mb * 1024 * 1024);
 }
 
 /**
@@ -137,7 +125,7 @@ export async function removeStoredVideo(storedFileName: string, root = mediaRoot
 
 /**
  * Stream a multipart course upload onto disk. The file part is never accumulated in memory.
- * Busboy's limit is one byte above the max so a file that is exactly the max is kept.
+ * A maxBytes option is only for tests. Course uploads are not size-capped.
  */
 export async function writeVideoUpload(
   request: Request,
@@ -149,13 +137,13 @@ export async function writeVideoUpload(
   }
 
   const root = path.resolve(options.root ?? mediaRoot());
-  const maxBytes = options.maxBytes ?? maxUploadBytes();
+  const maxBytes = options.maxBytes;
   await mkdir(root, { recursive: true });
   const tempPath = path.join(root, `.upload-${randomUUID()}.part`);
 
   try {
     const parsed = await parseMultipart(request, contentType, tempPath, maxBytes);
-    if (parsed.truncated || parsed.sizeBytes > maxBytes) {
+    if (maxBytes !== undefined && (parsed.truncated || parsed.sizeBytes > maxBytes)) {
       throw new MediaError(413, `That video is larger than ${formatUploadLimit(maxBytes)}`);
     }
     if (parsed.sizeBytes < 12) {
@@ -260,7 +248,7 @@ function parseMultipart(
   request: Request,
   contentType: string,
   tempPath: string,
-  maxBytes: number,
+  maxBytes?: number,
 ): Promise<ParsedUpload> {
   return new Promise((resolve, reject) => {
     let busboy: ReturnType<typeof Busboy>;
@@ -270,7 +258,7 @@ function parseMultipart(
         defParamCharset: "utf8",
         limits: {
           files: 1,
-          fileSize: maxBytes + 1,
+          ...(maxBytes !== undefined ? { fileSize: maxBytes + 1 } : {}),
           fields: 8,
           fieldSize: 16 * 1024,
           parts: 12,
