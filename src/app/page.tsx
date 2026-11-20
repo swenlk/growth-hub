@@ -1,12 +1,15 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { AuthSplit } from "@/components/auth-split";
-import { Button } from "@/components/ui/button";
+import { AutoSubmitForm } from "@/components/auto-submit-form";
 import { homeForRoles } from "@/lib/access";
-import { auth } from "@/lib/auth";
+import { auth, signIn } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+
+async function startKeycloakSignIn() {
+  "use server";
+  await signIn("keycloak", { redirectTo: "/" });
+}
 
 export default async function HomePage() {
   const session = await auth();
@@ -15,15 +18,8 @@ export default async function HomePage() {
   }
 
   return (
-    <AuthSplit>
-      <h4 className="mb-3 font-semibold">Staff training, one tenant at a time</h4>
-      <p className="mb-8 text-lg text-neutral-500 dark:text-neutral-300">
-        Everyone uses the same sign-in. After you sign in, the workspace matches your account:
-        platform, organization admin, or learning.
-      </p>
-      <Button asChild>
-        <Link href="/login">Sign in</Link>
-      </Button>
-    </AuthSplit>
+    <AutoSubmitForm action={startKeycloakSignIn}>
+      <p>Redirecting to sign in…</p>
+    </AutoSubmitForm>
   );
 }

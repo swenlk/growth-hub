@@ -182,6 +182,7 @@ async function ensureRealm(request: ReturnType<typeof api>) {
   realm.bruteForceProtected = true;
   // Dev only. The web container is not localhost from Keycloak's point of view.
   realm.sslRequired = "NONE";
+  realm.loginTheme = "growth-hub";
 
   const updated = await request("PUT", `/admin/realms/${REALM}`, realm);
   if (!updated.ok) {

@@ -1,0 +1,170 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #fff;
+  color: #111827;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.page {
+  display: flex;
+  min-height: 100vh;
+}
+
+.art {
+  display: none;
+  width: 50%;
+  background: #f8fafc url("../img/auth-img.png") center / cover no-repeat;
+}
+
+.panel {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+}
+
+.panel-inner {
+  width: 100%;
+  max-width: 464px;
+}
+
+.logo {
+  display: block;
+  width: 168px;
+  height: auto;
+  margin-bottom: 28px;
+}
+
+#kc-form-options,
+.login-pf-settings,
+#kc-info,
+#kc-registration,
+#kc-social-providers,
+#kc-select-try-another-way-form {
+  display: none;
+}
+
+#kc-form, #kc-form-wrapper, form {
+  margin: 0;
+}
+
+.form-group, .pf-c-form__group {
+  margin-bottom: 16px;
+}
+
+label, .pf-c-form__label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+input[type="text"], input[type="password"], input[type="email"] {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 0.95rem;
+  background: #fff;
+}
+
+input:focus {
+  outline: 2px solid rgba(69, 109, 255, 0.25);
+  border-color: #456dff;
+}
+
+.pf-c-input-group {
+  position: relative;
+}
+
+.pf-c-input-group input {
+  padding-right: 40px;
+}
+
+button[data-password-toggle] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+button[data-password-toggle] i {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: center / contain no-repeat;
+}
+
+button[data-password-toggle] .fa-eye {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+}
+
+button[data-password-toggle] .fa-eye-slash {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.88 9.88a3 3 0 1 0 4.24 4.24'/%3E%3Cpath d='M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68'/%3E%3Cpath d='M6.61 6.61A13.53 13.53 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61'/%3E%3Cline x1='2' x2='22' y1='2' y2='22'/%3E%3C/svg%3E");
+}
+
+#kc-login, input[type="submit"], .pf-c-button.pf-m-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  margin-top: 8px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #456dff;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#kc-login:hover, input[type="submit"]:hover {
+  background: #3458e6;
+}
+
+a {
+  color: #456dff;
+  text-decoration: none;
+}
+
+.alert {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.alert-success, .alert-info, .alert-warning {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+#kc-username {
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+}
+
+@media (min-width: 1024px) {
+  .art { display: block; }
+  .panel { width: 50%; }
+}
