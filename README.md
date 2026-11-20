@@ -31,9 +31,9 @@ If `.env.local` already exists, keep it. Phase 1 reads `MONGODB_URI`. If that UR
 
 1. Open [http://localhost:3000](http://localhost:3000). You should see three areas: Tenants, Admin, and Learning.
 2. Open each area and confirm the nav matches the role:
-   - `/platform/tenants` — Tenants
-   - `/admin` — Dashboard, Staff, Courses, Assignments, Reports
-   - `/learn` — My training, with Assigned and Completed sections
+   - `/platform/tenants` - Tenants
+   - `/admin` - Dashboard, Staff, Courses, Assignments, Reports
+   - `/learn` - My training, with Assigned and Completed sections
 3. Open [http://localhost:3000/login](http://localhost:3000/login). It explains Keycloak and does not redirect yet.
 4. Open [http://localhost:3000/api/health](http://localhost:3000/api/health). With MongoDB running, the response is `ok: true` and lists `tenants`, `courses`, and `staff`. If MongoDB is stopped, the response is HTTP 503 and the pages above still load.
 

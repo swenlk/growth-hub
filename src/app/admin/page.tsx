@@ -35,7 +35,7 @@ export default async function AdminHomePage() {
 
   const assignments = assignmentRows[0]?.total ?? 0;
   const completed = assignmentRows[0]?.completed ?? 0;
-  const completion = assignments === 0 ? "—" : `${Math.round((completed / assignments) * 100)}%`;
+  const completion = assignments === 0 ? "-" : `${Math.round((completed / assignments) * 100)}%`;
   const counts = [
     { label: "Staff", value: String(staffCount), icon: UsersRound, iconBg: "bg-cyan-600", gradientFrom: "from-cyan-600/10" },
     { label: "Courses", value: String(courseCount), icon: BookOpen, iconBg: "bg-purple-600", gradientFrom: "from-purple-600/10" },

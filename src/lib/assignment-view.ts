@@ -63,7 +63,7 @@ export function dueDateFromInput(value: string): Date {
 }
 
 export function formatDay(value: Date | undefined | null): string {
-  if (!value) return "—";
+  if (!value) return "-";
   return value.toISOString().slice(0, 10);
 }
 
