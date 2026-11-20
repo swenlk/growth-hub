@@ -42,24 +42,16 @@ export default async function CourseDetailPage({
 
   return (
     <>
-      <DashboardBreadcrumb title={course.title} text="Course" />
-      <div className="card mb-4">
-        <p className="text-sm text-neutral-500 dark:text-neutral-300">
-          <Link href="/admin/courses" className="text-primary">
-            Courses
-          </Link>
-        </p>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+      <DashboardBreadcrumb title={course.title} text="Course" backHref="/admin/courses" />
+      <div className="card mb-4 !h-auto">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h6 className="text-lg font-semibold">{course.title}</h6>
-            <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
+            <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600 dark:text-neutral-300">
               <StatusBadge status={course.status} label={course.status === "archived" ? "Inactive" : undefined} />
-              <span className="mx-2 text-neutral-300">/</span>
-              {formatDuration(course.video.durationSeconds)}
-              <span className="mx-2 text-neutral-300">/</span>
-              {formatBytes(course.video.sizeBytes)}
-              <span className="mx-2 text-neutral-300">/</span>
-              {course.video.originalFileName}
+              <span>{formatDuration(course.video.durationSeconds)}</span>
+              <span>{formatBytes(course.video.sizeBytes)}</span>
+              <span>{course.video.originalFileName}</span>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

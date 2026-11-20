@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Pencil } from "lucide-react";
 
 import { ListPager } from "@/components/dashboard/list-pager";
-import { StatusBadge } from "@/components/dashboard/status-badge";
+import { OverdueNote, StatusBadge, WatchedMeter } from "@/components/dashboard/status-badge";
 import { headCell, lastBodyCell } from "@/components/dashboard/table-styles";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ export default async function AssignmentsPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Assignments" text="Assign" />
+      <DashboardBreadcrumb title="Assignments" text="Assign" hint="See who has which course, and open a row to change it." />
       <div className="card flex flex-1 flex-col !h-auto">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <form method="get" className="flex flex-wrap items-center gap-3">
@@ -139,16 +139,20 @@ export default async function AssignmentsPage({
                     <TableCell className={`${cell} font-medium`}>{row.courseTitle}</TableCell>
                     <TableCell className={cell}>{formatDay(row.assignedAt)}</TableCell>
                     <TableCell className={cell}>
-                      {formatDay(row.dueDate)}
-                      {overdue ? <span className="ml-2 text-destructive">Overdue</span> : null}
+                      <span className="inline-flex flex-wrap items-center gap-2">
+                        {formatDay(row.dueDate)}
+                        {overdue ? <OverdueNote /> : null}
+                      </span>
                     </TableCell>
                     <TableCell className={cell}>
                       <StatusBadge status={row.status} label={assignmentStatusLabel(row.status)} />
                     </TableCell>
-                    <TableCell className={cell}>{watchedPercent(row.watchedSeconds, row.durationSeconds)}%</TableCell>
+                    <TableCell className={cell}>
+                      <WatchedMeter percent={watchedPercent(row.watchedSeconds, row.durationSeconds)} />
+                    </TableCell>
                     <TableCell className={cell}>{formatDay(row.completedAt)}</TableCell>
                     <TableCell className={cell}>
-                      <Button asChild size="icon" variant="outline" className="size-8">
+                      <Button asChild size="sm" variant="outline">
                         <Link
                           href={assignmentListHref(
                             { staffId, courseId, status, page },
@@ -156,7 +160,8 @@ export default async function AssignmentsPage({
                           )}
                           aria-label={`Edit ${row.staffName}`}
                         >
-                          <Pencil />
+                          <Pencil className="size-3.5" />
+                          Edit
                         </Link>
                       </Button>
                     </TableCell>

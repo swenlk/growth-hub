@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDay, isOverdue, watchedPercent, assignmentStatusLabel, type AssignmentFilter } from "@/lib/assignment-view";
 import type { AssignmentRow } from "@/lib/assignments";
 
-import { StatusBadge } from "./status-badge";
+import { OverdueNote, StatusBadge, WatchedMeter } from "./status-badge";
 import { headCell, lastBodyCell } from "./table-styles";
 
 const FILTERS: { id: AssignmentFilter; label: string }[] = [
@@ -107,13 +107,17 @@ export function AssignmentTable({
               ) : null}
               <TableCell className={cell}>{formatDay(row.assignedAt)}</TableCell>
               <TableCell className={cell}>
-                {formatDay(row.dueDate)}
-                {overdue ? <span className="ml-2 text-destructive">Overdue</span> : null}
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  {formatDay(row.dueDate)}
+                  {overdue ? <OverdueNote /> : null}
+                </span>
               </TableCell>
               <TableCell className={cell}>
                 <StatusBadge status={row.status} label={assignmentStatusLabel(row.status)} />
               </TableCell>
-              <TableCell className={cell}>{watchedPercent(row.watchedSeconds, row.durationSeconds)}%</TableCell>
+              <TableCell className={cell}>
+                <WatchedMeter percent={watchedPercent(row.watchedSeconds, row.durationSeconds)} />
+              </TableCell>
               <TableCell className={cell}>{formatDay(row.completedAt)}</TableCell>
             </TableRow>
           );

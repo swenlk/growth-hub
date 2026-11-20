@@ -64,11 +64,11 @@ export default async function StaffListPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Staff" text="Directory" />
+      <DashboardBreadcrumb title="Staff" text="Directory" hint="Search by name or email, then open a person to update them." />
       <div className="card flex flex-1 flex-col !h-auto">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <form method="get" className="flex flex-wrap items-center gap-3">
-            <Input name="q" defaultValue={q} placeholder="Search" aria-label="Search" className="w-56" />
+            <Input name="q" defaultValue={q} placeholder="Name or email" aria-label="Search name or email" className="w-56" />
             <SearchableSelect
               name="status"
               ariaLabel="Status"
@@ -113,12 +113,13 @@ export default async function StaffListPage({
                       <StatusBadge status={person.status} label={person.status === "disabled" ? "Inactive" : undefined} />
                     </TableCell>
                     <TableCell className={cell}>
-                      <Button asChild size="icon" variant="outline" className="size-8">
+                      <Button asChild size="sm" variant="outline">
                         <Link
                           href={staffListHref({ q, status, page }, `/admin/staff/${person._id.toString()}/edit`)}
                           aria-label={`Edit ${person.name}`}
                         >
-                          <Pencil />
+                          <Pencil className="size-3.5" />
+                          Edit
                         </Link>
                       </Button>
                     </TableCell>

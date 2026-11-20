@@ -59,11 +59,11 @@ export default async function CoursesPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Courses" text="Library" />
+      <DashboardBreadcrumb title="Courses" text="Library" hint="Each course is one video. Open it to see who is assigned." />
       <div className="card flex flex-1 flex-col !h-auto">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <form method="get" className="flex flex-wrap items-center gap-3">
-            <Input name="q" defaultValue={q} placeholder="Search" aria-label="Search" className="w-56" />
+            <Input name="q" defaultValue={q} placeholder="Course title" aria-label="Search course title" className="w-56" />
             <SearchableSelect
               name="status"
               ariaLabel="Status"
@@ -110,12 +110,13 @@ export default async function CoursesPage({
                       <StatusBadge status={course.status} label={course.status === "archived" ? "Inactive" : undefined} />
                     </TableCell>
                     <TableCell className={cell}>
-                      <Button asChild size="icon" variant="outline" className="size-8">
+                      <Button asChild size="sm" variant="outline">
                         <Link
                           href={courseListHref({ q, status, page }, `/admin/courses/${course._id.toString()}/edit`)}
                           aria-label={`Edit ${course.title}`}
                         >
-                          <Pencil />
+                          <Pencil className="size-3.5" />
+                          Edit
                         </Link>
                       </Button>
                     </TableCell>

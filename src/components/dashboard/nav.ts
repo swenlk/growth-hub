@@ -34,6 +34,7 @@ export const NAV: Record<AppRole, DashNavItem[]> = {
     { title: "Courses", url: "/admin/courses", icon: BookOpen },
     { title: "Assignments", url: "/admin/assignments", icon: ClipboardList },
     // { title: "Reports", url: "/admin/reports", icon: ChartPie },
+    { title: "Profile", url: "/admin/profile", icon: UserRound },
   ],
   staff: [
     { title: "My training", url: "/learn", icon: GraduationCap },

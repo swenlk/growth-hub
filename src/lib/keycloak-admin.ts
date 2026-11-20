@@ -232,6 +232,31 @@ async function passwordError(response: Response, fallback: string): Promise<stri
   }
 }
 
+/** The name and email stored for this sign-in account. */
+export async function readSignInAccount(userId: string): Promise<{ name: string; email: string; enabled: boolean }> {
+  const config = settings();
+  const current = await adminFetch(`/admin/realms/${config.realm}/users/${encodeURIComponent(userId)}`);
+  if (current.status === 404) {
+    throw new KeycloakAdminError("Keycloak user was not found", 404);
+  }
+  if (!current.ok) {
+    throw new KeycloakAdminError(await errorMessage(current, "Could not read the Keycloak user"), current.status);
+  }
+  const user = (await current.json()) as {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    username?: string;
+    enabled?: boolean;
+  };
+  const name = [user.firstName, user.lastName].filter((part) => part && part.trim().length > 0).join(" ");
+  return {
+    name: name || user.email || user.username || "Account",
+    email: user.email || user.username || "",
+    enabled: user.enabled !== false,
+  };
+}
+
 /** Update the sign-in name and whether the account can sign in. Other Keycloak fields stay as they are. */
 export async function updateStaffAccount(userId: string, input: { name: string; enabled: boolean }) {
   const name = z.string().trim().min(1).max(120).parse(input.name);

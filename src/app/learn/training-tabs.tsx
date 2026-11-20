@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { AssignmentStatus } from "@/lib/domain";
+import { StatusBadge } from "@/components/dashboard/status-badge";
 import { cn } from "@/lib/utils";
 
 type TrainingCard = {
@@ -84,33 +85,36 @@ export function TrainingTabs() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {cards.map((card) => (
-              <article
+              <Link
                 key={card.assignmentId}
-                className="rounded-lg border border-neutral-200 p-4 dark:border-slate-600"
+                href={`/learn/assignments/${card.assignmentId}`}
+                className="block rounded-lg border border-neutral-200 p-4 transition hover:border-primary/40 hover:bg-primary/5 dark:border-slate-600"
               >
-                <h6 className="text-lg font-semibold">{card.title}</h6>
+                <h6 className="text-base font-semibold">{card.title}</h6>
+                <div className="mt-3">
+                  <StatusBadge
+                    status={card.status}
+                    label={card.status === "in_progress" ? "In progress" : card.status === "completed" ? "Completed" : "Not started"}
+                  />
+                </div>
                 {card.status === "completed" ? (
-                  <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-300">Completed {card.completedLabel}</p>
+                  <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-300">Completed {card.completedLabel}</p>
                 ) : (
                   <>
-                    <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-300">
-                      {card.status === "in_progress" ? "In progress" : "Not started"}
-                      {card.dueLabel ? ` · Due ${card.dueLabel}` : ""}
-                      {card.overdue ? <span className="text-destructive"> · Overdue</span> : null}
+                    <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-300">
+                      {card.dueLabel ? `Due ${card.dueLabel}` : "No due date"}
+                      {card.overdue ? <span className="ml-2 font-medium text-destructive">Overdue</span> : null}
                     </p>
-                    <div className="mt-4 h-2 overflow-hidden rounded bg-neutral-200 dark:bg-slate-600">
+                    <div className="mt-4 h-2 overflow-hidden rounded bg-neutral-200 dark:bg-slate-600" aria-hidden="true">
                       <div className="h-full bg-primary" style={{ width: `${card.percent}%` }} />
                     </div>
                     <p className="mt-2 text-sm text-neutral-500">{card.percent}% watched</p>
                   </>
                 )}
-                <Link
-                  href={`/learn/assignments/${card.assignmentId}`}
-                  className="mt-4 inline-block text-sm font-medium text-primary"
-                >
+                <span className="mt-4 inline-block text-sm font-medium text-primary">
                   {card.status === "completed" ? "Review" : "Watch"}
-                </Link>
-              </article>
+                </span>
+              </Link>
             ))}
           </div>
         )}

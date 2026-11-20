@@ -19,7 +19,7 @@ export default async function ProfilePage() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Profile" text="Account" />
+      <DashboardBreadcrumb title="Profile" text="Account" hint="Your sign-in name and email. Set a new password when you want one." />
       <div className="card mx-auto w-full max-w-md !h-auto">
         {person ? (
           <ProfileForm name={person.name} email={person.email} action={changeOwnPasswordAction} />

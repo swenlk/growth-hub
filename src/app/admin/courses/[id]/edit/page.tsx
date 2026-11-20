@@ -39,6 +39,7 @@ export default async function EditCoursePage({
       <DashboardBreadcrumb
         title="Edit course"
         text="Library"
+        hint="Replace the video only when this course should play a different file."
         backHref={withListQuery("/admin/courses", {
           q: readText(query.q),
           status: readChoice(query.status, COURSE_STATUSES),

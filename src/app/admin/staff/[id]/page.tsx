@@ -32,24 +32,20 @@ export default async function StaffDetailPage({
 
   return (
     <>
-      <DashboardBreadcrumb title={person.name} text="Staff member" />
-      <div className="card mb-4">
-        <p className="text-sm text-neutral-500 dark:text-neutral-300">
-          <Link href="/admin/staff" className="text-primary">
-            Staff
-          </Link>
-        </p>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <h6 className="text-lg font-semibold">{person.name}</h6>
-          <Button asChild size="sm" variant="outline">
-            <Link href={`/admin/staff/${id}/edit`}>Edit</Link>
-          </Button>
+      <DashboardBreadcrumb title={person.name} text="Staff member" backHref="/admin/staff" />
+      <div className="card mb-4 !h-auto">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h6 className="text-lg font-semibold">{person.name}</h6>
+            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-300">{person.email}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusBadge status={person.status} label={person.status === "disabled" ? "Inactive" : undefined} />
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/admin/staff/${id}/edit`}>Edit</Link>
+            </Button>
+          </div>
         </div>
-        <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
-          {person.email}
-          <span className="mx-2 text-neutral-300">/</span>
-          <StatusBadge status={person.status} label={person.status === "disabled" ? "Inactive" : undefined} />
-        </p>
       </div>
       <div className="card">
         <h6 className="mb-4 text-lg font-semibold">Assignment history</h6>

@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { TrackedVideoPlayer } from "@/components/TrackedVideoPlayer";
+import { StatusBadge } from "@/components/dashboard/status-badge";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { formatDay, watchedPercent } from "@/lib/assignment-view";
+import { assignmentStatusLabel, formatDay, isOverdue, watchedPercent } from "@/lib/assignment-view";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 import { z } from "zod";
 
@@ -34,10 +35,13 @@ export default async function AssignmentPlayerPage({
       <DashboardBreadcrumb title={course.title} text="Watch" backHref="/learn" />
       <div className="card">
         <h6 className="text-lg font-semibold">{course.title}</h6>
-        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-300">
-          {assignment.dueDate ? `Due ${formatDay(assignment.dueDate)}` : "No due date"}
-          {assignment.completedAt ? ` · Completed ${formatDay(assignment.completedAt)}` : ""}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-neutral-500 dark:text-neutral-300">
+          <StatusBadge status={assignment.status} label={assignmentStatusLabel(assignment.status)} />
+          <span>{watchedPercent(assignment.progress?.watchedSeconds ?? 0, course.video.durationSeconds)}% watched</span>
+          <span>{assignment.dueDate ? `Due ${formatDay(assignment.dueDate)}` : "No due date"}</span>
+          {isOverdue(assignment) ? <span className="font-medium text-destructive">Overdue</span> : null}
+          {assignment.completedAt ? <span>Completed {formatDay(assignment.completedAt)}</span> : null}
+        </div>
         {course.description ? (
           <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-600 dark:text-neutral-300">
             {course.description}

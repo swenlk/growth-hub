@@ -24,7 +24,7 @@ export default async function TenantsPage() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Tenants" text="Organizations" />
+      <DashboardBreadcrumb title="Tenants" text="Organizations" hint="Each organization has its own people, courses, and videos." />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <div className="xl:col-span-5">
           <div className="card">

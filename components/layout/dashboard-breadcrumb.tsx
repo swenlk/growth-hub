@@ -13,13 +13,17 @@ import { House } from 'lucide-react';
 interface BreadcrumbData {
     title: string,
     text: string,
+    hint?: string,
     backHref?: string,
 }
 
-const DashboardBreadcrumb = ({ title, text, backHref }: BreadcrumbData) => {
+const DashboardBreadcrumb = ({ title, text, hint, backHref }: BreadcrumbData) => {
     return (
         <div className='mb-4 flex flex-wrap items-start justify-between gap-2'>
-            <h6 className="text-xl font-semibold">{title}</h6>
+            <div>
+                <h6 className="text-xl font-semibold">{title}</h6>
+                {hint ? <p className="mt-1 max-w-xl text-sm font-normal text-neutral-500 dark:text-neutral-300">{hint}</p> : null}
+            </div>
             <div className="flex flex-col items-end gap-2">
                 <Breadcrumb>
                     <BreadcrumbList>
