@@ -312,6 +312,74 @@ type RealmUser = {
   attributes?: Record<string, string[]>;
 };
 
+export type TenantAdminAccount = {
+  id: string;
+  name: string;
+  email: string;
+  enabled: boolean;
+};
+
+type AccountUser = {
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  username?: string;
+  enabled?: boolean;
+  attributes?: Record<string, string[]>;
+};
+
+/** Admins for one organization. Keycloak stores the slug on tenantId and the tenant_admin role. */
+export async function listTenantAdmins(slug: string): Promise<TenantAdminAccount[]> {
+  const tenantSlug = assertValidSlug(slug);
+  const config = settings();
+  const members = await listRoleMembers(config.realm, "tenant_admin");
+  const admins: TenantAdminAccount[] = [];
+
+  for (const member of members) {
+    if (!member.id) continue;
+    const user = member.attributes ? member : await readAccountUser(config.realm, member.id);
+    if (user.attributes?.tenantId?.[0] !== tenantSlug) continue;
+    const name = [user.firstName, user.lastName].filter((part) => part && part.trim().length > 0).join(" ");
+    admins.push({
+      id: member.id,
+      name: name || user.email || user.username || "Admin",
+      email: user.email || user.username || "",
+      enabled: user.enabled !== false,
+    });
+  }
+
+  admins.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  return admins;
+}
+
+async function listRoleMembers(realm: string, roleName: string): Promise<AccountUser[]> {
+  const users: AccountUser[] = [];
+  const pageSize = 100;
+
+  for (let first = 0; first < pageSize * 50; first += pageSize) {
+    const response = await adminFetch(
+      `/admin/realms/${realm}/roles/${encodeURIComponent(roleName)}/users?first=${first}&max=${pageSize}`,
+    );
+    if (!response.ok) {
+      throw new KeycloakAdminError(await errorMessage(response, "Could not list organization admins"), response.status);
+    }
+    const batch = (await response.json()) as AccountUser[];
+    users.push(...batch.filter((user) => typeof user.id === "string" && user.id.length > 0));
+    if (batch.length < pageSize) return users;
+  }
+
+  throw new KeycloakAdminError("Organization admin list is too large", 500);
+}
+
+async function readAccountUser(realm: string, userId: string): Promise<AccountUser> {
+  const response = await adminFetch(`/admin/realms/${realm}/users/${encodeURIComponent(userId)}`);
+  if (!response.ok) {
+    throw new KeycloakAdminError(await errorMessage(response, "Could not read the organization admin"), response.status);
+  }
+  return (await response.json()) as AccountUser;
+}
+
 export async function listRealmUsers(): Promise<RealmUser[]> {
   const config = settings();
   const users: RealmUser[] = [];

@@ -9,7 +9,9 @@ import { temporaryPassword } from "@/lib/passwords";
 import { forgetTenantRegistry } from "@/lib/tenant-registry";
 import { assertValidSlug, TenantSlugError, tenantMediaDir } from "@/lib/tenant";
 import {
+  createTenantAdminSchema,
   createTenantSchema,
+  updateTenantSchema,
   updateTenantStatusSchema,
   type CreateTenantInput,
 } from "@/lib/validators";
@@ -49,25 +51,25 @@ async function directoryExists(dir: string): Promise<boolean> {
  */
 export async function createTenantWithAdmin(input: CreateTenantInput): Promise<{
   name: string;
-  slug: string;
+  tenant: string;
   email: string;
   temporaryPassword: string;
 }> {
   const parsed = createTenantSchema.parse(input);
   let slug: string;
   try {
-    slug = assertValidSlug(parsed.slug);
+    slug = assertValidSlug(parsed.tenant);
   } catch (error) {
     if (error instanceof TenantSlugError) {
-      throw new TenantSetupError("That slug is not valid");
+      throw new TenantSetupError("That tenant is not valid");
     }
     throw error;
   }
 
   const { Tenant } = await getPlatformModels();
-  const existing = await Tenant.exists({ slug });
+  const existing = await Tenant.exists({ tenant: slug });
   if (existing) {
-    throw new TenantSetupError("That slug is already used", 409);
+    throw new TenantSetupError("That tenant is already used", 409);
   }
 
   const password = temporaryPassword();
@@ -79,7 +81,7 @@ export async function createTenantWithAdmin(input: CreateTenantInput): Promise<{
   try {
     const tenant = await Tenant.create({
       name: parsed.name,
-      slug,
+      tenant: slug,
       status: "active",
     });
     registryId = tenant._id.toString();
@@ -104,7 +106,7 @@ export async function createTenantWithAdmin(input: CreateTenantInput): Promise<{
     forgetTenantRegistry(slug);
     return {
       name: tenant.name,
-      slug,
+      tenant: slug,
       email: parsed.adminEmail,
       temporaryPassword: password,
     };
@@ -117,7 +119,7 @@ export async function createTenantWithAdmin(input: CreateTenantInput): Promise<{
       keycloakUserId,
     });
     if (duplicateKey(error)) {
-      throw new TenantSetupError("That slug is already used", 409);
+      throw new TenantSetupError("That tenant is already used", 409);
     }
     if (error instanceof KeycloakAdminError && error.status === 409) {
       throw new TenantSetupError("That email is already used", 409);
@@ -131,20 +133,72 @@ export async function createTenantWithAdmin(input: CreateTenantInput): Promise<{
   }
 }
 
-export async function setTenantStatus(slug: string, status: TenantStatus): Promise<void> {
-  const parsed = updateTenantStatusSchema.parse({ status });
-  let safe: string;
+function requireSlug(slug: string): string {
   try {
-    safe = assertValidSlug(slug);
+    return assertValidSlug(slug);
   } catch (error) {
     if (error instanceof TenantSlugError) {
-      throw new TenantSetupError("That slug is not valid");
+      throw new TenantSetupError("That tenant is not valid");
+    }
+    throw error;
+  }
+}
+
+export async function setTenantStatus(slug: string, status: TenantStatus): Promise<void> {
+  const parsed = updateTenantStatusSchema.parse({ status });
+  const safe = requireSlug(slug);
+
+  const { Tenant } = await getPlatformModels();
+  const updated = await Tenant.updateOne({ tenant: safe }, { $set: { status: parsed.status } });
+  if (updated.matchedCount === 0) {
+    throw new TenantSetupError("Organization was not found", 404);
+  }
+  forgetTenantRegistry(safe);
+}
+
+/** Another tenant admin for an organization that already exists. The first admin is still created with the organization. */
+export async function createTenantAdmin(
+  slug: string,
+  input: { name: string; email: string },
+): Promise<{ email: string; temporaryPassword: string }> {
+  const parsed = createTenantAdminSchema.parse(input);
+  const safe = requireSlug(slug);
+  const { Tenant } = await getPlatformModels();
+  const existing = await Tenant.exists({ tenant: safe });
+  if (!existing) {
+    throw new TenantSetupError("Organization was not found", 404);
+  }
+
+  const password = temporaryPassword();
+  try {
+    await createUser({
+      name: parsed.name,
+      email: parsed.email,
+      tenantId: safe,
+      role: "tenant_admin",
+      temporaryPassword: password,
+    });
+  } catch (error) {
+    if (error instanceof KeycloakAdminError && error.status === 409) {
+      throw new TenantSetupError("That email is already used", 409);
+    }
+    if (error instanceof KeycloakAdminError) {
+      throw new TenantSetupError(error.message);
     }
     throw error;
   }
 
+  return { email: parsed.email, temporaryPassword: password };
+}
+
+export async function updateTenant(slug: string, input: { name: string; status: TenantStatus }): Promise<void> {
+  const parsed = updateTenantSchema.parse(input);
+  const safe = requireSlug(slug);
   const { Tenant } = await getPlatformModels();
-  const updated = await Tenant.updateOne({ slug: safe }, { $set: { status: parsed.status } });
+  const updated = await Tenant.updateOne(
+    { tenant: safe },
+    { $set: { name: parsed.name, status: parsed.status } },
+  );
   if (updated.matchedCount === 0) {
     throw new TenantSetupError("Organization was not found", 404);
   }

@@ -31,6 +31,7 @@ type OldDoc = {
   _id: unknown;
   name?: unknown;
   slug?: unknown;
+  tenant?: unknown;
   status?: unknown;
   createdAt?: unknown;
   tenantId?: unknown;
@@ -201,7 +202,8 @@ async function main() {
     if (!name) throw new Error(`Tenant ${id} has no name`);
     const choice = chooseSlug({
       name,
-      storedSlug: typeof tenant.slug === "string" ? tenant.slug : null,
+      storedSlug:
+        typeof tenant.tenant === "string" ? tenant.tenant : typeof tenant.slug === "string" ? tenant.slug : null,
       mapped: map.get(id.toLowerCase()) ?? null,
     });
     const courses = await source
@@ -275,7 +277,7 @@ async function main() {
       if ((await fileExists(video.dest)) || (await fileExists(video.source))) filesReady += 1;
     }
 
-    const registry = await Tenant.findOne({ slug: tenant.slug }).lean();
+    const registry = await Tenant.findOne({ tenant: tenant.slug }).lean();
     const models = registry ? await getTenantModels(tenant.slug) : null;
     const destCourseIds = new Set(
       models ? (await models.Course.find().select("_id").lean()).map((course) => idString(course._id)) : [],
@@ -320,7 +322,7 @@ async function main() {
     if (!registry) {
       await Tenant.create({
         name: tenant.name,
-        slug: tenant.slug,
+        tenant: tenant.slug,
         status: tenant.status,
         ...(tenant.createdAt ? { createdAt: tenant.createdAt } : {}),
       });

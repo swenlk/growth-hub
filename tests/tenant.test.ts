@@ -115,11 +115,11 @@ async function main() {
 
   const created = createTenantSchema.parse({
     name: "Acme",
-    slug: " Acme-West ",
+    tenant: " Acme-West ",
     adminName: "Ada",
     adminEmail: "ada@example.com",
   });
-  assert.equal(created.slug, "acme-west");
+  assert.equal(created.tenant, "acme-west");
 
   assert.equal(tenantAttributeValue("super_admin", null), null);
   assert.equal(tenantAttributeValue("tenant_admin", "abc"), "abc");
@@ -132,7 +132,7 @@ async function main() {
   for (const slug of ["../x", "A".repeat(31), "platform", "a.b"]) {
     const parsed = createTenantSchema.safeParse({
       name: "Acme",
-      slug,
+      tenant: slug,
       adminName: "Ada",
       adminEmail: "ada@example.com",
     });

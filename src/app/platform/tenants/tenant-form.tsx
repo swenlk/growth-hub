@@ -21,8 +21,8 @@ export function TenantCreateForm({
         <Input name="name" required maxLength={120} />
       </label>
       <label className="grid gap-2 text-sm font-medium">
-        Slug
-        <Input name="slug" required maxLength={30} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" />
+        Tenant
+        <Input name="tenant" required maxLength={30} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" />
         <span className="text-xs font-normal text-neutral-500 dark:text-neutral-300">
           Lowercase letters, numbers, and hyphens.
         </span>

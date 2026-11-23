@@ -59,17 +59,17 @@ async function main() {
   const { Tenant } = await getPlatformModels();
 
   for (const spec of TENANTS) {
-    const existing = await Tenant.exists({ slug: spec.slug });
+    const existing = await Tenant.exists({ tenant: spec.slug });
     if (existing) {
       console.log(`${spec.slug}: organization already exists`);
     } else {
       const created = await createTenantWithAdmin({
         name: spec.name,
-        slug: spec.slug,
+        tenant: spec.slug,
         adminName: spec.adminName,
         adminEmail: spec.adminEmail,
       });
-      console.log(`${created.slug} admin ${created.email}`);
+      console.log(`${created.tenant} admin ${created.email}`);
       console.log(`temporary password: ${created.temporaryPassword}`);
     }
 

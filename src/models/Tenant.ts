@@ -5,7 +5,7 @@ import { TENANT_STATUSES, type TenantStatus } from "@/lib/domain";
 export interface Tenant {
   _id: Types.ObjectId;
   name: string;
-  slug: string;
+  tenant: string;
   status: TenantStatus;
   createdAt: Date;
 }
@@ -13,7 +13,7 @@ export interface Tenant {
 export const tenantSchema = new Schema<Tenant>(
   {
     name: { type: String, required: true, trim: true },
-    slug: {
+    tenant: {
       type: String,
       required: true,
       unique: true,

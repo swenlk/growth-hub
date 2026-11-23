@@ -30,7 +30,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ slug:
 
   try {
     await setTenantStatus(slug, parsed.data.status);
-    return Response.json({ slug, status: parsed.data.status });
+    return Response.json({ tenant: slug, status: parsed.data.status });
   } catch (error) {
     if (error instanceof TenantSetupError) {
       return Response.json({ error: error.message }, { status: error.status });

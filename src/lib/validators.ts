@@ -26,12 +26,12 @@ const slugSchema = z
   .max(SLUG_MAX)
   .toLowerCase()
   .regex(SLUG_REGEX, "Use lowercase letters, numbers, and hyphens")
-  .refine((slug) => !RESERVED_SLUGS.has(slug), "That slug is reserved");
+  .refine((slug) => !RESERVED_SLUGS.has(slug), "That tenant is reserved");
 
 export const createTenantSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
-    slug: slugSchema,
+    tenant: slugSchema,
     adminName: z.string().trim().min(1).max(120),
     adminEmail: z.string().trim().email().max(254).toLowerCase(),
   })
@@ -40,6 +40,20 @@ export const createTenantSchema = z
 export const updateTenantStatusSchema = z
   .object({
     status: tenantStatusSchema,
+  })
+  .strict();
+
+export const updateTenantSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    status: tenantStatusSchema,
+  })
+  .strict();
+
+export const createTenantAdminSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().email().max(254).toLowerCase(),
   })
   .strict();
 

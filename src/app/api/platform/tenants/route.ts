@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         name: created.name,
-        slug: created.slug,
+        tenant: created.tenant,
         email: created.email,
         temporaryPassword: created.temporaryPassword,
       },

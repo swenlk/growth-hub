@@ -27,7 +27,7 @@ function main() {
   assert.ok(staffSchema.path("assignments"));
   assert.equal(staffSchema.path("assignments.assignmentId")?.isRequired, true);
 
-  const slug = tenantSchema.path("slug");
+  const slug = tenantSchema.path("tenant");
   assert.equal(slug?.options.immutable, true);
   assert.equal(slug?.options.unique, true);
   assert.deepEqual(tenantSchema.path("status")?.options.enum, ["active", "disabled"]);

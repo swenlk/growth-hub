@@ -35,7 +35,7 @@ export async function registryStatus(slug: string): Promise<RegistryStatus> {
   if (cached && cached.expiresAt > now) return cached.status;
 
   const { Tenant } = await getPlatformModels();
-  const row = await Tenant.findOne({ slug }).select({ status: 1 }).lean();
+  const row = await Tenant.findOne({ tenant: slug }).select({ status: 1 }).lean();
   const status: RegistryStatus = row == null ? "missing" : row.status === "active" ? "active" : "disabled";
   cache.set(slug, { status, expiresAt: now + REGISTRY_TTL_MS });
   return status;
