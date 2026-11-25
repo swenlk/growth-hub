@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sign in</title>
     <link rel="icon" href="${url.resourcesPath}/img/favicon.ico?v=gh" />
-    <link href="${url.resourcesPath}/css/login.css" rel="stylesheet" />
+    <link href="${url.resourcesPath}/css/login.css?v=gh2" rel="stylesheet" />
 </head>
 <body>
 <div class="page">

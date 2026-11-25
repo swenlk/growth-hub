@@ -391,6 +391,128 @@ async function clientSecret(request: ReturnType<typeof api>, clientUuid: string)
   return secret.value;
 }
 
+const MICROSOFT_ALIAS = "microsoft";
+const MICROSOFT_FLOW = "growth-hub-microsoft";
+
+function microsoftSettings() {
+  const tenantId = process.env.MICROSOFT_ENTRA_TENANT_ID?.trim() ?? "";
+  const clientId = process.env.MICROSOFT_ENTRA_CLIENT_ID?.trim() ?? "";
+  const clientSecret = process.env.MICROSOFT_ENTRA_CLIENT_SECRET?.trim() ?? "";
+  const present = [tenantId, clientId, clientSecret].filter((value) => value.length > 0).length;
+  if (present === 0) return null;
+  if (present < 3) {
+    throw new Error(
+      "Microsoft sign-in needs MICROSOFT_ENTRA_TENANT_ID, MICROSOFT_ENTRA_CLIENT_ID, and MICROSOFT_ENTRA_CLIENT_SECRET",
+    );
+  }
+  return { tenantId, clientId, clientSecret };
+}
+
+async function ensureMicrosoftBrokerFlow(request: ReturnType<typeof api>) {
+  const listed = await request("GET", `/admin/realms/${REALM}/authentication/flows`);
+  if (!listed.ok) {
+    throw new Error(`Could not list authentication flows: ${await readError(listed)}`);
+  }
+  const flows = (await listed.json()) as { alias?: string }[];
+  if (!flows.some((flow) => flow.alias === MICROSOFT_FLOW)) {
+    const created = await request("POST", `/admin/realms/${REALM}/authentication/flows`, {
+      alias: MICROSOFT_FLOW,
+      description: "Link a Microsoft account to the Growth Hub user with the same email",
+      providerId: "basic-flow",
+      topLevel: true,
+      builtIn: false,
+    });
+    if (!created.ok) {
+      throw new Error(`Could not create the Microsoft sign-in flow: ${await readError(created)}`);
+    }
+  }
+
+  for (const provider of ["idp-detect-existing-broker-user", "idp-auto-link"]) {
+    await ensureFlowExecution(request, provider);
+  }
+}
+
+async function ensureFlowExecution(request: ReturnType<typeof api>, provider: string) {
+  const path = `/admin/realms/${REALM}/authentication/flows/${encodeURIComponent(MICROSOFT_FLOW)}/executions`;
+  const listed = await request("GET", path);
+  if (!listed.ok) {
+    throw new Error(`Could not list the Microsoft sign-in flow: ${await readError(listed)}`);
+  }
+  let executions = (await listed.json()) as { id?: string; providerId?: string; requirement?: string }[];
+  let execution = executions.find((item) => item.providerId === provider);
+  if (!execution) {
+    const added = await request("POST", `${path}/execution`, { provider });
+    if (!added.ok) {
+      throw new Error(`Could not add ${provider}: ${await readError(added)}`);
+    }
+    const again = await request("GET", path);
+    if (!again.ok) {
+      throw new Error(`Could not list the Microsoft sign-in flow: ${await readError(again)}`);
+    }
+    executions = (await again.json()) as { id?: string; providerId?: string; requirement?: string }[];
+    execution = executions.find((item) => item.providerId === provider);
+  }
+  if (!execution?.id) {
+    throw new Error(`Could not add ${provider} to the Microsoft sign-in flow`);
+  }
+  if (execution.requirement === "REQUIRED") return;
+
+  const updated = await request("PUT", path, { ...execution, requirement: "REQUIRED" });
+  if (!updated.ok) {
+    throw new Error(`Could not require ${provider}: ${await readError(updated)}`);
+  }
+}
+
+/** Add Microsoft only when the Entra ID values are present. Email and password sign-in is unchanged. */
+async function ensureMicrosoftLogin(request: ReturnType<typeof api>) {
+  const settings = microsoftSettings();
+  if (!settings) return false;
+
+  await ensureMicrosoftBrokerFlow(request);
+
+  const desired = {
+    alias: MICROSOFT_ALIAS,
+    displayName: "Sign in with Microsoft",
+    providerId: "microsoft",
+    enabled: true,
+    trustEmail: true,
+    storeToken: false,
+    linkOnly: false,
+    firstBrokerLoginFlowAlias: MICROSOFT_FLOW,
+    config: {
+      clientId: settings.clientId,
+      clientSecret: settings.clientSecret,
+      tenantId: settings.tenantId,
+      defaultScope: "openid profile email",
+      syncMode: "IMPORT",
+      guiOrder: "1",
+    },
+  };
+
+  const existing = await request("GET", `/admin/realms/${REALM}/identity-provider/instances/${MICROSOFT_ALIAS}`);
+  if (existing.status === 404) {
+    const created = await request("POST", `/admin/realms/${REALM}/identity-provider/instances`, desired);
+    if (!created.ok) {
+      throw new Error(`Could not add Microsoft sign-in: ${await readError(created)}`);
+    }
+    return true;
+  }
+  if (!existing.ok) {
+    throw new Error(`Could not read Microsoft sign-in: ${await readError(existing)}`);
+  }
+
+  const current = (await existing.json()) as { config?: Record<string, string> };
+  const updated = await request("PUT", `/admin/realms/${REALM}/identity-provider/instances/${MICROSOFT_ALIAS}`, {
+    ...current,
+    ...desired,
+    config: { ...(current.config ?? {}), ...desired.config },
+  });
+  if (!updated.ok) {
+    throw new Error(`Could not update Microsoft sign-in: ${await readError(updated)}`);
+  }
+  return true;
+}
+
 async function main() {
   loadEnvFiles();
 
@@ -470,6 +592,7 @@ async function main() {
 
   await ensureServiceAccountRoles(request, adminClientId);
   await ensureAdminApiScope(request, adminClientId);
+  const microsoft = await ensureMicrosoftLogin(request);
 
   const webSecret = await clientSecret(request, webClientId);
   const adminSecret = await clientSecret(request, adminClientId);
@@ -485,6 +608,13 @@ async function main() {
   console.log("");
   console.log("On the host, KEYCLOAK_INTERNAL_URL=http://localhost:8080");
   console.log("Inside Compose, the web service sets KEYCLOAK_INTERNAL_URL=http://keycloak:8080");
+  if (microsoft) {
+    console.log("");
+    console.log(`Microsoft sign-in is enabled. Entra redirect URI: ${env.baseUrl}/realms/${REALM}/broker/microsoft/endpoint`);
+  } else {
+    console.log("");
+    console.log("Microsoft sign-in is off until MICROSOFT_ENTRA_TENANT_ID, MICROSOFT_ENTRA_CLIENT_ID, and MICROSOFT_ENTRA_CLIENT_SECRET are set.");
+  }
 }
 
 main().catch((error: unknown) => {
