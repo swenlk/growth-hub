@@ -74,6 +74,7 @@ export default async function CourseDetailPage({
         </p>
         <video
           controls
+          controlsList="nodownload"
           preload="metadata"
           playsInline
           className="max-h-[480px] w-full rounded-md bg-black"

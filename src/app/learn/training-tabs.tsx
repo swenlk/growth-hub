@@ -112,7 +112,7 @@ export function TrainingTabs() {
                   </>
                 )}
                 <span className="mt-4 inline-block text-sm font-medium text-primary">
-                  {card.status === "completed" ? "Review" : "Watch"}
+                  {card.status === "completed" ? "Rewatch" : card.status === "in_progress" ? "Continue" : "Start"}
                 </span>
               </Link>
             ))}

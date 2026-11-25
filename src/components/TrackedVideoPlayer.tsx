@@ -460,7 +460,7 @@ export function TrackedVideoPlayer({
       <video
         ref={videoRef}
         controls
-        controlsList="noplaybackrate"
+        controlsList="nodownload noplaybackrate"
         preload="metadata"
         playsInline
         className="max-h-[480px] w-full rounded-md bg-black"
