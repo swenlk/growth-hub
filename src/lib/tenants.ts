@@ -4,7 +4,7 @@ import { mkdir, rm, stat } from "node:fs/promises";
 
 import { dropTenantDatabase, getPlatformModels, provisionTenantDatabase } from "@/lib/db";
 import type { TenantStatus } from "@/lib/domain";
-import { createUser, deleteUser, KeycloakAdminError } from "@/lib/keycloak-admin";
+import { createUser, deleteUser, disableUser, KeycloakAdminError } from "@/lib/keycloak-admin";
 import { temporaryPassword } from "@/lib/passwords";
 import { forgetTenantRegistry } from "@/lib/tenant-registry";
 import { assertValidSlug, TenantSlugError, tenantMediaDir } from "@/lib/tenant";
@@ -159,9 +159,10 @@ export async function setTenantStatus(slug: string, status: TenantStatus): Promi
 /** Another tenant admin for an organization that already exists. The first admin is still created with the organization. */
 export async function createTenantAdmin(
   slug: string,
-  input: { name: string; email: string },
+  input: { name: string; email: string; enabled?: boolean },
 ): Promise<{ email: string; temporaryPassword: string }> {
-  const parsed = createTenantAdminSchema.parse(input);
+  const parsed = createTenantAdminSchema.parse({ name: input.name, email: input.email });
+  const enabled = input.enabled !== false;
   const safe = requireSlug(slug);
   const { Tenant } = await getPlatformModels();
   const existing = await Tenant.exists({ tenant: safe });
@@ -170,8 +171,9 @@ export async function createTenantAdmin(
   }
 
   const password = temporaryPassword();
+  let userId: string;
   try {
-    await createUser({
+    userId = await createUser({
       name: parsed.name,
       email: parsed.email,
       tenantId: safe,
@@ -186,6 +188,18 @@ export async function createTenantAdmin(
       throw new TenantSetupError(error.message);
     }
     throw error;
+  }
+
+  if (!enabled) {
+    try {
+      await disableUser(userId);
+    } catch (error) {
+      await deleteUser(userId).catch(() => undefined);
+      if (error instanceof KeycloakAdminError) {
+        throw new TenantSetupError(error.message);
+      }
+      throw error;
+    }
   }
 
   return { email: parsed.email, temporaryPassword: password };

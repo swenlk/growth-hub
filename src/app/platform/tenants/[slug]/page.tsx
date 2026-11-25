@@ -62,40 +62,41 @@ export default async function TenantDetailPage({
   return (
     <>
       <DashboardBreadcrumb text="Organization" backHref={backHref} />
-      <div className="grid items-start gap-4 xl:grid-cols-3">
-        <section className="card !h-auto">
-          <h6 className="mb-4 text-lg font-semibold">Details</h6>
-          <dl className="grid gap-4 text-sm">
-            <div>
-              <dt className="text-neutral-500 dark:text-neutral-300">Name</dt>
-              <dd className="mt-1 font-medium">{tenant.name}</dd>
-            </div>
-            <div>
-              <dt className="text-neutral-500 dark:text-neutral-300">Tenant</dt>
-              <dd className="mt-1 font-medium">{tenant.tenant}</dd>
-            </div>
-            <div>
-              <dt className="text-neutral-500 dark:text-neutral-300">Status</dt>
-              <dd className="mt-1">
-                <StatusBadge status={tenant.status} label={tenant.status === "disabled" ? "Inactive" : undefined} />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-neutral-500 dark:text-neutral-300">Created</dt>
-              <dd className="mt-1 font-medium">{tenant.createdAt.toISOString().slice(0, 10)}</dd>
-            </div>
-          </dl>
-        </section>
-        <section className="card !h-auto xl:col-span-2">
-          <h6 className="mb-4 text-lg font-semibold">Admins</h6>
-          {adminError ? (
-            <p className="text-sm text-destructive">{adminError}</p>
-          ) : admins.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-neutral-300 px-6 py-10 text-center text-sm text-neutral-500 dark:border-slate-600 dark:text-neutral-300">
-              No admins yet.
-            </div>
-          ) : (
-            <Table>
+      <div className="card w-full !h-auto">
+        <div className="grid items-start gap-6 xl:grid-cols-3">
+          <section>
+            <h6 className="mb-4 text-lg font-semibold">Details</h6>
+            <dl className="grid gap-4 text-sm">
+              <div>
+                <dt className="text-neutral-500 dark:text-neutral-300">Name</dt>
+                <dd className="mt-1 font-medium">{tenant.name}</dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500 dark:text-neutral-300">Tenant</dt>
+                <dd className="mt-1 font-medium">{tenant.tenant}</dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500 dark:text-neutral-300">Status</dt>
+                <dd className="mt-1">
+                  <StatusBadge status={tenant.status} label={tenant.status === "disabled" ? "Inactive" : undefined} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-neutral-500 dark:text-neutral-300">Created</dt>
+                <dd className="mt-1 font-medium">{tenant.createdAt.toISOString().slice(0, 10)}</dd>
+              </div>
+            </dl>
+          </section>
+          <section className="xl:col-span-2">
+            <h6 className="mb-4 text-lg font-semibold">Admins</h6>
+            {adminError ? (
+              <p className="text-sm text-destructive">{adminError}</p>
+            ) : admins.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-neutral-300 px-6 py-10 text-center text-sm text-neutral-500 dark:border-slate-600 dark:text-neutral-300">
+                No admins yet.
+              </div>
+            ) : (
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className={head}>#</TableHead>
@@ -119,9 +120,10 @@ export default async function TenantDetailPage({
                   );
                 })}
               </TableBody>
-            </Table>
-          )}
-        </section>
+              </Table>
+            )}
+          </section>
+        </div>
       </div>
     </>
   );

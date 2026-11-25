@@ -257,6 +257,50 @@ export async function readSignInAccount(userId: string): Promise<{ name: string;
   };
 }
 
+/** Name and sign-in status for one organization's tenant admin. Email and roles stay as they are. */
+export async function updateTenantAdminAccount(
+  userId: string,
+  tenantSlug: string,
+  input: { name: string; enabled: boolean },
+) {
+  const slug = assertValidSlug(tenantSlug);
+  const name = z.string().trim().min(1).max(120).parse(input.name);
+  const id = z.string().uuid().parse(userId);
+  const config = settings();
+  const current = await adminFetch(`/admin/realms/${config.realm}/users/${encodeURIComponent(id)}`);
+  if (current.status === 404) {
+    throw new KeycloakAdminError("That admin was not found", 404);
+  }
+  if (!current.ok) {
+    throw new KeycloakAdminError(await errorMessage(current, "Could not read the organization admin"), current.status);
+  }
+  const user = (await current.json()) as Record<string, unknown> & { attributes?: Record<string, string[]> };
+  if (user.attributes?.tenantId?.[0] !== slug) {
+    throw new KeycloakAdminError("That admin was not found", 404);
+  }
+  if (!(await userHasRealmRole(config.realm, id, "tenant_admin"))) {
+    throw new KeycloakAdminError("That admin was not found", 404);
+  }
+  const response = await adminFetch(`/admin/realms/${config.realm}/users/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify({ ...user, firstName: name, lastName: "", enabled: input.enabled }),
+  });
+  if (!response.ok) {
+    throw new KeycloakAdminError(await errorMessage(response, "Could not update the organization admin"), response.status);
+  }
+}
+
+async function userHasRealmRole(realm: string, userId: string, roleName: string) {
+  const response = await adminFetch(
+    `/admin/realms/${realm}/users/${encodeURIComponent(userId)}/role-mappings/realm`,
+  );
+  if (!response.ok) {
+    throw new KeycloakAdminError(await errorMessage(response, "Could not read the organization admin"), response.status);
+  }
+  const roles = (await response.json()) as { name?: string }[];
+  return roles.some((role) => role.name === roleName);
+}
+
 /** Update the sign-in name and whether the account can sign in. Other Keycloak fields stay as they are. */
 export async function updateStaffAccount(userId: string, input: { name: string; enabled: boolean }) {
   const name = z.string().trim().min(1).max(120).parse(input.name);
@@ -317,6 +361,7 @@ export type TenantAdminAccount = {
   name: string;
   email: string;
   enabled: boolean;
+  createdAt: string | null;
 };
 
 type AccountUser = {
@@ -326,6 +371,7 @@ type AccountUser = {
   email?: string;
   username?: string;
   enabled?: boolean;
+  createdTimestamp?: number;
   attributes?: Record<string, string[]>;
 };
 
@@ -338,7 +384,8 @@ export async function listTenantAdmins(slug: string): Promise<TenantAdminAccount
 
   for (const member of members) {
     if (!member.id) continue;
-    const user = member.attributes ? member : await readAccountUser(config.realm, member.id);
+    const user =
+      member.attributes && member.createdTimestamp ? member : await readAccountUser(config.realm, member.id);
     if (user.attributes?.tenantId?.[0] !== tenantSlug) continue;
     const name = [user.firstName, user.lastName].filter((part) => part && part.trim().length > 0).join(" ");
     admins.push({
@@ -346,6 +393,7 @@ export async function listTenantAdmins(slug: string): Promise<TenantAdminAccount
       name: name || user.email || user.username || "Admin",
       email: user.email || user.username || "",
       enabled: user.enabled !== false,
+      createdAt: user.createdTimestamp ? new Date(user.createdTimestamp).toISOString().slice(0, 10) : null,
     });
   }
 

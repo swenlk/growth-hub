@@ -8,8 +8,7 @@ import { readChoice, readPage, readText, withListQuery } from "@/lib/list-search
 import { requireRole } from "@/lib/rbac";
 import { assertValidSlug, TenantSlugError } from "@/lib/tenant";
 
-import { TenantAdminForm } from "../../admin-form";
-import { createTenantAdminAction, updateTenantAction } from "../../actions";
+import { updateTenantAction } from "../../actions";
 import { TenantEditForm } from "../../edit-form";
 
 export const metadata: Metadata = {
@@ -54,10 +53,6 @@ export default async function EditTenantPage({
       <div className="flex flex-wrap items-start justify-center gap-4">
         <div className="card w-full max-w-md !h-auto">
           <TenantEditForm tenant={tenant.tenant} name={tenant.name} status={tenant.status} action={updateTenantAction} />
-        </div>
-        <div className="card w-full max-w-md !h-auto">
-          <h6 className="mb-4 text-lg font-semibold">Add admin</h6>
-          <TenantAdminForm tenant={tenant.tenant} action={createTenantAdminAction} />
         </div>
       </div>
     </>

@@ -26,7 +26,10 @@ export const ROLE_LABEL: Record<AppRole, string> = {
 };
 
 export const NAV: Record<AppRole, DashNavItem[]> = {
-  super_admin: [{ title: "Tenants", url: "/platform/tenants", icon: Building2 }],
+  super_admin: [
+    { title: "Tenants", url: "/platform/tenants", icon: Building2 },
+    { title: "Tenant admins", url: "/platform/tenant-admins", icon: UsersRound },
+  ],
   tenant_admin: [
     { title: "Dashboard", url: "/admin", icon: House },
     { label: "Workspace" },

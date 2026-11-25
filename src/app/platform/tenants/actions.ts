@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import type { AccountFormState } from "@/lib/form-state";
 import { AuthzError, requireRole } from "@/lib/rbac";
-import { createTenantAdmin, createTenantWithAdmin, TenantSetupError, updateTenant } from "@/lib/tenants";
-import { createTenantAdminSchema, createTenantSchema, updateTenantSchema } from "@/lib/validators";
+import { createTenantWithAdmin, TenantSetupError, updateTenant } from "@/lib/tenants";
+import { createTenantSchema, updateTenantSchema } from "@/lib/validators";
 
 export async function createTenantAction(
   _previous: AccountFormState,
@@ -77,35 +77,4 @@ export async function updateTenantAction(
   revalidatePath(`/platform/tenants/${tenant}`);
   revalidatePath(`/platform/tenants/${tenant}/edit`);
   return { error: null, saved: true };
-}
-
-export async function createTenantAdminAction(
-  _previous: AccountFormState,
-  formData: FormData,
-): Promise<AccountFormState> {
-  const tenant = formData.get("tenant");
-  const parsed = createTenantAdminSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-  });
-  if (typeof tenant !== "string" || !parsed.success) {
-    return {
-      error: parsed.success ? "That admin is not valid" : (parsed.error.issues[0]?.message ?? "Check the form"),
-      created: null,
-    };
-  }
-
-  try {
-    await requireRole("super_admin");
-    const created = await createTenantAdmin(tenant, parsed.data);
-    return {
-      error: null,
-      created: { email: created.email, temporaryPassword: created.temporaryPassword },
-    };
-  } catch (error) {
-    if (error instanceof AuthzError || error instanceof TenantSetupError) {
-      return { error: error.message, created: null };
-    }
-    throw error;
-  }
 }

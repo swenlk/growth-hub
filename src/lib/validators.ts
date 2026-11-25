@@ -57,6 +57,13 @@ export const createTenantAdminSchema = z
   })
   .strict();
 
+export const updateTenantAdminSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    status: staffStatusSchema,
+  })
+  .strict();
+
 export const createStaffSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
