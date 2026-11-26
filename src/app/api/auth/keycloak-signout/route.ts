@@ -17,10 +17,12 @@ export async function POST(request: NextRequest) {
     "",
   );
   const clientId = process.env.KEYCLOAK_CLIENT_ID?.trim() || "growth-hub-web";
+  const form = await request.formData().catch(() => null);
+  const returnTo = form?.get("returnTo") === "/login" ? "/login" : "/";
 
   const logoutUrl = new URL(`${issuer}/protocol/openid-connect/logout`);
   logoutUrl.searchParams.set("client_id", clientId);
-  logoutUrl.searchParams.set("post_logout_redirect_uri", `${appOrigin()}/`);
+  logoutUrl.searchParams.set("post_logout_redirect_uri", `${appOrigin()}${returnTo}`);
   if (idToken) logoutUrl.searchParams.set("id_token_hint", idToken);
 
   const response = NextResponse.redirect(logoutUrl, 303);

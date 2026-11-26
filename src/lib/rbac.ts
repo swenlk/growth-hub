@@ -2,7 +2,9 @@ import "server-only";
 
 import type { Model } from "mongoose";
 import type { Session } from "next-auth";
+import { redirect } from "next/navigation";
 
+import { primaryRole } from "@/lib/access";
 import { auth } from "@/lib/auth";
 import { getTenantModels } from "@/lib/db";
 import type { AppRole } from "@/lib/domain";
@@ -41,6 +43,25 @@ export async function requireRole(...allowed: AppRole[]) {
     throw new AuthzError(403, "Forbidden");
   }
   return session;
+}
+
+/** Tenant admins and staff cannot enter the workspace while their organization is disabled. */
+export async function redirectInactiveOrganization(): Promise<void> {
+  const session = await auth();
+  const role = primaryRole(session?.roles ?? []);
+  if ((role !== "tenant_admin" && role !== "staff") || !session?.tenantId) return;
+
+  let slug: string;
+  try {
+    slug = assertValidSlug(session.tenantId);
+  } catch (error) {
+    if (error instanceof TenantSlugError) return;
+    throw error;
+  }
+
+  if ((await registryStatus(slug)) === "disabled") {
+    redirect("/organization-inactive");
+  }
 }
 
 /**

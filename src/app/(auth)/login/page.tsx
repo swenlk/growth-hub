@@ -6,6 +6,7 @@ import { AutoSubmitForm } from "@/components/auto-submit-form";
 import { Button } from "@/components/ui/button";
 import { homeForRoles } from "@/lib/access";
 import { auth, signIn } from "@/lib/auth";
+import { redirectInactiveOrganization } from "@/lib/rbac";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -36,6 +37,7 @@ export default async function LoginPage({
   const session = await auth();
 
   if (session?.sub && session.roles.length > 0 && !params.error) {
+    await redirectInactiveOrganization();
     redirect(homeForRoles(session.roles));
   }
 

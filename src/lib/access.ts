@@ -44,6 +44,7 @@ export function isPublicPath(pathname: string): boolean {
   return (
     pathname === "/" ||
     pathname === "/login" ||
+    pathname === "/organization-inactive" ||
     pathname.startsWith("/api/auth") ||
     pathname === "/api/health"
   );
