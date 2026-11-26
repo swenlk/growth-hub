@@ -21,6 +21,7 @@ services:
       - "8080:8080"
     volumes:
       - ./keycloak/themes/growth-hub:/opt/keycloak/themes/growth-hub:ro
+      - ./keycloak/providers/skip-update-password/target/skip-update-password-1.0.0.jar:/opt/keycloak/providers/skip-update-password.jar:ro
     healthcheck:
       test:
         [

@@ -1,4 +1,5 @@
 node_modules
+keycloak/providers/skip-update-password/target
 .next
 out
 dist

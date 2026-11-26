@@ -393,6 +393,8 @@ async function clientSecret(request: ReturnType<typeof api>, clientUuid: string)
 
 const MICROSOFT_ALIAS = "microsoft";
 const MICROSOFT_FLOW = "growth-hub-microsoft";
+const MICROSOFT_POST_FLOW = "growth-hub-microsoft-post";
+const SKIP_UPDATE_PASSWORD = "growth-hub-microsoft-no-password";
 
 function microsoftSettings() {
   const tenantId = process.env.MICROSOFT_ENTRA_TENANT_ID?.trim() ?? "";
@@ -427,13 +429,35 @@ async function ensureMicrosoftBrokerFlow(request: ReturnType<typeof api>) {
     }
   }
 
-  for (const provider of ["idp-detect-existing-broker-user", "idp-auto-link"]) {
-    await ensureFlowExecution(request, provider);
+  for (const provider of ["idp-detect-existing-broker-user", "idp-auto-link", SKIP_UPDATE_PASSWORD]) {
+    await ensureFlowExecution(request, MICROSOFT_FLOW, provider);
   }
 }
 
-async function ensureFlowExecution(request: ReturnType<typeof api>, provider: string) {
-  const path = `/admin/realms/${REALM}/authentication/flows/${encodeURIComponent(MICROSOFT_FLOW)}/executions`;
+async function ensureMicrosoftPostFlow(request: ReturnType<typeof api>) {
+  const listed = await request("GET", `/admin/realms/${REALM}/authentication/flows`);
+  if (!listed.ok) {
+    throw new Error(`Could not list authentication flows: ${await readError(listed)}`);
+  }
+  const flows = (await listed.json()) as { alias?: string }[];
+  if (!flows.some((flow) => flow.alias === MICROSOFT_POST_FLOW)) {
+    const created = await request("POST", `/admin/realms/${REALM}/authentication/flows`, {
+      alias: MICROSOFT_POST_FLOW,
+      description: "Microsoft sign-in keeps the Microsoft account as the only credential",
+      providerId: "basic-flow",
+      topLevel: true,
+      builtIn: false,
+    });
+    if (!created.ok) {
+      throw new Error(`Could not create the Microsoft post-login flow: ${await readError(created)}`);
+    }
+  }
+
+  await ensureFlowExecution(request, MICROSOFT_POST_FLOW, SKIP_UPDATE_PASSWORD);
+}
+
+async function ensureFlowExecution(request: ReturnType<typeof api>, flow: string, provider: string) {
+  const path = `/admin/realms/${REALM}/authentication/flows/${encodeURIComponent(flow)}/executions`;
   const listed = await request("GET", path);
   if (!listed.ok) {
     throw new Error(`Could not list the Microsoft sign-in flow: ${await readError(listed)}`);
@@ -453,7 +477,7 @@ async function ensureFlowExecution(request: ReturnType<typeof api>, provider: st
     execution = executions.find((item) => item.providerId === provider);
   }
   if (!execution?.id) {
-    throw new Error(`Could not add ${provider} to the Microsoft sign-in flow`);
+    throw new Error(`Could not add ${provider} to ${flow}`);
   }
   if (execution.requirement === "REQUIRED") return;
 
@@ -469,6 +493,7 @@ async function ensureMicrosoftLogin(request: ReturnType<typeof api>) {
   if (!settings) return false;
 
   await ensureMicrosoftBrokerFlow(request);
+  await ensureMicrosoftPostFlow(request);
 
   const desired = {
     alias: MICROSOFT_ALIAS,
@@ -479,6 +504,7 @@ async function ensureMicrosoftLogin(request: ReturnType<typeof api>) {
     storeToken: false,
     linkOnly: false,
     firstBrokerLoginFlowAlias: MICROSOFT_FLOW,
+    postBrokerLoginFlowAlias: MICROSOFT_POST_FLOW,
     config: {
       clientId: settings.clientId,
       clientSecret: settings.clientSecret,
