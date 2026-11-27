@@ -29,8 +29,8 @@ export interface Course {
   /** Optional PDFs. Opening one does not affect watch progress. */
   documents?: CourseDocument[];
   status: CourseStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  createdDate: Date;
+  updatedDate: Date;
 }
 
 const courseDocumentSchema = new Schema<CourseDocument>(
@@ -63,5 +63,5 @@ export const courseSchema = new Schema<Course>(
     documents: { type: [courseDocumentSchema], required: false },
     status: { type: String, enum: COURSE_STATUSES, required: true, default: "active" },
   },
-  { timestamps: true },
+  { timestamps: { createdAt: "createdDate", updatedAt: "updatedDate" } },
 );

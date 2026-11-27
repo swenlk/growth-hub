@@ -17,11 +17,11 @@ export type AssignmentRow = {
   durationSeconds: number;
   staffId: string;
   staffName: string;
-  assignedAt: Date;
+  assignedDate: Date;
   dueDate?: Date;
   status: AssignmentStatus;
   watchedSeconds: number;
-  completedAt?: Date;
+  completedDate?: Date;
 };
 
 type AssignmentWriter = Pick<TenantContext, "models" | "session">;
@@ -50,7 +50,7 @@ export async function assignCourse(ctx: AssignmentWriter, input: CreateAssignmen
     throw new AssignmentError("Choose active staff in this organization");
   }
 
-  const assignedAt = new Date();
+  const assignedDate = new Date();
   const result = await ctx.models.Staff.bulkWrite(
     people.map((person) => ({
       updateOne: {
@@ -60,7 +60,7 @@ export async function assignCourse(ctx: AssignmentWriter, input: CreateAssignmen
             assignments: {
               assignmentId: randomUUID(),
               courseId: course._id,
-              assignedAt,
+              assignedDate,
               assignedBy: ctx.session.sub,
               ...(dueDate ? { dueDate } : {}),
               status: "assigned",
@@ -97,7 +97,7 @@ export async function updateAssignment(
 
   const previousStaffId = String(person._id);
   const previousCourseId = String(assignment.courseId);
-  const completedAt = input.status === "completed" ? (assignment.completedAt ?? new Date()) : null;
+  const completedDate = input.status === "completed" ? (assignment.completedDate ?? new Date()) : null;
 
   if (previousStaffId === input.staffId) {
     const set: Record<string, unknown> = {
@@ -107,8 +107,8 @@ export async function updateAssignment(
     const unset: Record<string, ""> = {};
     if (input.dueDate) set["assignments.$[item].dueDate"] = input.dueDate;
     else unset["assignments.$[item].dueDate"] = "";
-    if (completedAt) set["assignments.$[item].completedAt"] = completedAt;
-    else unset["assignments.$[item].completedAt"] = "";
+    if (completedDate) set["assignments.$[item].completedDate"] = completedDate;
+    else unset["assignments.$[item].completedDate"] = "";
 
     const updated = await models.Staff.updateOne(
       { _id: person._id },
@@ -120,12 +120,12 @@ export async function updateAssignment(
     const next = {
       assignmentId: assignment.assignmentId,
       courseId: input.courseId,
-      assignedAt: assignment.assignedAt,
+      assignedDate: assignment.assignedDate,
       assignedBy: assignment.assignedBy,
       status: input.status,
       progress: assignment.progress,
       ...(input.dueDate ? { dueDate: input.dueDate } : {}),
-      ...(completedAt ? { completedAt } : {}),
+      ...(completedDate ? { completedDate } : {}),
     };
     const pushed = await models.Staff.updateOne(
       { _id: input.staffId, "assignments.assignmentId": { $ne: assignmentId } },
@@ -181,15 +181,15 @@ export async function listAssignments(
         durationSeconds: course ? courseDurationSeconds(course) : 0,
         staffId: String(person._id),
         staffName: person.name,
-        assignedAt: assignment.assignedAt,
+        assignedDate: assignment.assignedDate,
         dueDate: assignment.dueDate,
         status: assignment.status,
         watchedSeconds: assignment.progress?.watchedSeconds ?? 0,
-        completedAt: assignment.completedAt,
+        completedDate: assignment.completedDate,
       });
     }
   }
 
-  rows.sort((left, right) => right.assignedAt.getTime() - left.assignedAt.getTime());
+  rows.sort((left, right) => right.assignedDate.getTime() - left.assignedDate.getTime());
   return rows;
 }

@@ -105,7 +105,7 @@ export function AssignmentTable({
                   </Link>
                 </TableCell>
               ) : null}
-              <TableCell className={cell}>{formatDay(row.assignedAt)}</TableCell>
+              <TableCell className={cell}>{formatDay(row.assignedDate)}</TableCell>
               <TableCell className={cell}>
                 <span className="inline-flex flex-wrap items-center gap-2">
                   {formatDay(row.dueDate)}
@@ -118,7 +118,7 @@ export function AssignmentTable({
               <TableCell className={cell}>
                 <WatchedMeter percent={watchedPercent(row.watchedSeconds, row.durationSeconds)} />
               </TableCell>
-              <TableCell className={cell}>{formatDay(row.completedAt)}</TableCell>
+              <TableCell className={cell}>{formatDay(row.completedDate)}</TableCell>
             </TableRow>
           );
         })}

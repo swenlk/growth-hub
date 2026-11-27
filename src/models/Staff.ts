@@ -12,13 +12,13 @@ export interface Assignment {
   /** Stable id for this assignment instance. Progress APIs use this, not courseId. */
   assignmentId: string;
   courseId: Types.ObjectId;
-  assignedAt: Date;
+  assignedDate: Date;
   /** Keycloak user id of the admin who assigned the course. */
   assignedBy: string;
   dueDate?: Date;
   status: AssignmentStatus;
   progress: AssignmentProgress;
-  completedAt?: Date;
+  completedDate?: Date;
 }
 
 export interface Staff {
@@ -32,8 +32,8 @@ export interface Staff {
    * Updates must match assignments.assignmentId and must not replace the array.
    */
   assignments: Assignment[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdDate: Date;
+  updatedDate: Date;
 }
 
 const progressSchema = new Schema<AssignmentProgress>(
@@ -42,8 +42,8 @@ const progressSchema = new Schema<AssignmentProgress>(
     watchedSeconds: { type: Number, required: true, default: 0, min: 0 },
     lastPositionSeconds: { type: Number, required: true, default: 0, min: 0 },
     videoCompleted: { type: Boolean, required: true, default: false },
-    videoCompletedAt: { type: Date },
-    lastHeartbeatAt: { type: Date },
+    videoCompletedDate: { type: Date },
+    lastHeartbeatDate: { type: Date },
   },
   { _id: false },
 );
@@ -52,12 +52,12 @@ const assignmentSchema = new Schema<Assignment>(
   {
     assignmentId: { type: String, required: true },
     courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true },
-    assignedAt: { type: Date, required: true },
+    assignedDate: { type: Date, required: true },
     assignedBy: { type: String, required: true },
     dueDate: { type: Date },
     status: { type: String, enum: ASSIGNMENT_STATUSES, required: true, default: "assigned" },
     progress: { type: progressSchema, required: true, default: () => ({}) },
-    completedAt: { type: Date },
+    completedDate: { type: Date },
   },
   { _id: false },
 );
@@ -70,7 +70,7 @@ export const staffSchema = new Schema<Staff>(
     status: { type: String, enum: STAFF_STATUSES, required: true, default: "active" },
     assignments: { type: [assignmentSchema], default: [] },
   },
-  { timestamps: true },
+  { timestamps: { createdAt: "createdDate", updatedAt: "updatedDate" } },
 );
 
 staffSchema.index({ email: 1 }, { unique: true });

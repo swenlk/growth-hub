@@ -18,10 +18,10 @@ export type TrainingCourse = {
 type ListedAssignment = {
   assignmentId: string;
   courseId: { toString(): string };
-  assignedAt: Date;
+  assignedDate: Date;
   dueDate?: Date;
   status: AssignmentStatus;
-  completedAt?: Date;
+  completedDate?: Date;
   progress?: { watchedSeconds?: number };
 };
 
@@ -53,7 +53,7 @@ export async function listOwnTraining(ctx: TenantContext, status: AssignmentStat
   const courseById = new Map(courses.map((course) => [String(course._id), course]));
 
   return assignments
-    .toSorted((left, right) => new Date(right.assignedAt).getTime() - new Date(left.assignedAt).getTime())
+    .toSorted((left, right) => new Date(right.assignedDate).getTime() - new Date(left.assignedDate).getTime())
     .map((assignment) => {
       const course = courseById.get(String(assignment.courseId));
       const duration = course ? courseDurationSeconds(course) : 0;
@@ -63,7 +63,7 @@ export async function listOwnTraining(ctx: TenantContext, status: AssignmentStat
         title: course?.title ?? "Course removed",
         status: assignment.status,
         dueLabel: assignment.dueDate ? formatDay(new Date(assignment.dueDate)) : "",
-        completedLabel: formatDay(assignment.completedAt ? new Date(assignment.completedAt) : null),
+        completedLabel: formatDay(assignment.completedDate ? new Date(assignment.completedDate) : null),
         percent: watchedPercent(watched, duration),
         overdue: isOverdue({
           status: assignment.status,

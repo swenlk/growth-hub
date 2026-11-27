@@ -44,7 +44,7 @@ export default async function AssignmentPlayerPage({
           <span>{watchedPercent(assignment.progress?.watchedSeconds ?? 0, durationSeconds)}% watched</span>
           <span>{assignment.dueDate ? `Due ${formatDay(assignment.dueDate)}` : "No due date"}</span>
           {isOverdue(assignment) ? <span className="font-medium text-destructive">Overdue</span> : null}
-          {assignment.completedAt ? <span>Completed {formatDay(assignment.completedAt)}</span> : null}
+          {assignment.completedDate ? <span>Completed {formatDay(assignment.completedDate)}</span> : null}
         </div>
         {course.description ? (
           <p className="mt-4 whitespace-pre-wrap text-sm text-neutral-600 dark:text-neutral-300">

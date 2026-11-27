@@ -48,7 +48,7 @@ function main() {
 
   const spoofed = emptyProgress();
   const spoofAt = at("2026-01-01T00:00:01.000Z");
-  spoofed.lastHeartbeatAt = at("2026-01-01T00:00:00.000Z");
+  spoofed.lastHeartbeatDate = at("2026-01-01T00:00:00.000Z");
   assert.throws(
     () => applyHeartbeat(spoofed, "in_progress", { from: 0, to: 40, position: 40 }, 120, spoofAt),
     (error: unknown) => error instanceof Error && "status" in error && error.status === 400,
@@ -57,7 +57,7 @@ function main() {
   assert.equal(spoofed.watchedRanges.length, 0);
 
   const started = emptyProgress();
-  started.lastHeartbeatAt = at("2026-01-01T00:00:00.000Z");
+  started.lastHeartbeatDate = at("2026-01-01T00:00:00.000Z");
   const almost = applyHeartbeat(
     started,
     "assigned",
@@ -78,10 +78,10 @@ function main() {
   );
   assert.equal(done.progress.videoCompleted, true);
   assert.equal(done.status, "in_progress");
-  assert.ok(done.progress.videoCompletedAt);
+  assert.ok(done.progress.videoCompletedDate);
 
   const fileEndsEarly = emptyProgress();
-  fileEndsEarly.lastHeartbeatAt = at("2026-01-01T00:00:00.000Z");
+  fileEndsEarly.lastHeartbeatDate = at("2026-01-01T00:00:00.000Z");
   const shortFile = applyHeartbeat(
     fileEndsEarly,
     "in_progress",
@@ -94,7 +94,7 @@ function main() {
   assert.equal(shortFile.status, "in_progress");
 
   const nearEnd = emptyProgress();
-  nearEnd.lastHeartbeatAt = at("2026-01-01T00:00:00.000Z");
+  nearEnd.lastHeartbeatDate = at("2026-01-01T00:00:00.000Z");
   const roundedPastEnd = applyHeartbeat(
     nearEnd,
     "in_progress",
@@ -107,7 +107,7 @@ function main() {
   assert.equal(roundedPastEnd.progress.videoCompleted, false);
 
   const wayPast = emptyProgress();
-  wayPast.lastHeartbeatAt = at("2026-01-01T00:00:00.000Z");
+  wayPast.lastHeartbeatDate = at("2026-01-01T00:00:00.000Z");
   assert.throws(
     () => applyHeartbeat(wayPast, "in_progress", { from: 40, to: 50, position: 50 }, 42, at("2026-01-01T00:00:05.000Z")),
     (error: unknown) => error instanceof Error && "status" in error && error.status === 400,
@@ -125,7 +125,7 @@ function main() {
   assert.equal(completed.status, "completed");
   const again = completeAssignment(completed, at("2026-01-01T00:04:00.000Z"));
   assert.equal(again.status, "completed");
-  assert.equal(again.completedAt?.toISOString(), completed.completedAt?.toISOString());
+  assert.equal(again.completedDate?.toISOString(), completed.completedDate?.toISOString());
 
   const first = watch("one");
   const second = watch("two");

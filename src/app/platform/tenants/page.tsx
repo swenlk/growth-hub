@@ -55,7 +55,7 @@ export default async function TenantsPage({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const page = Number.isInteger(requested) && requested > 0 ? Math.min(requested, pageCount) : 1;
   const tenants = await Tenant.find(filter)
-    .sort({ createdAt: -1 })
+    .sort({ createdDate: -1 })
     .skip((page - 1) * pageSize)
     .limit(pageSize)
     .lean();
@@ -114,7 +114,7 @@ export default async function TenantsPage({
                     <TableCell className={cell}>
                       <StatusBadge status={tenant.status} label={tenant.status === "disabled" ? "Inactive" : undefined} />
                     </TableCell>
-                    <TableCell className={cell}>{tenant.createdAt.toISOString().slice(0, 10)}</TableCell>
+                    <TableCell className={cell}>{tenant.createdDate.toISOString().slice(0, 10)}</TableCell>
                     <TableCell className={cell}>
                       <div className="flex flex-wrap justify-center gap-2">
                         <Button asChild size="sm" variant="outline">

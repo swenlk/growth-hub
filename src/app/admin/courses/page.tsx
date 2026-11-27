@@ -51,7 +51,7 @@ export default async function CoursesPage({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const page = Number.isInteger(requested) && requested > 0 ? Math.min(requested, pageCount) : 1;
   const courses = await models.Course.find(filter)
-    .sort({ createdAt: -1 })
+    .sort({ createdDate: -1 })
     .skip((page - 1) * pageSize)
     .limit(pageSize)
     .lean();

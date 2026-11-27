@@ -7,7 +7,7 @@ export interface Tenant {
   name: string;
   tenant: string;
   status: TenantStatus;
-  createdAt: Date;
+  createdDate: Date;
 }
 
 export const tenantSchema = new Schema<Tenant>(
@@ -23,5 +23,5 @@ export const tenantSchema = new Schema<Tenant>(
     },
     status: { type: String, enum: TENANT_STATUSES, required: true, default: "active" },
   },
-  { timestamps: { createdAt: true, updatedAt: false } },
+  { timestamps: { createdAt: "createdDate", updatedAt: false } },
 );

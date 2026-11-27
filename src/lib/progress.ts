@@ -40,7 +40,7 @@ export type AssignmentWatch = {
   assignmentId: string;
   status: AssignmentStatus;
   progress: AssignmentProgress;
-  completedAt?: Date;
+  completedDate?: Date;
 };
 
 function roundSeconds(value: number): number {
@@ -132,11 +132,11 @@ export function resumeSeconds(ranges: WatchedRange[], lastPosition: number, dura
   return 0;
 }
 
-export function allowedWatchSeconds(lastHeartbeatAt: Date | undefined, now: Date): number {
-  if (!lastHeartbeatAt) {
+export function allowedWatchSeconds(lastHeartbeatDate: Date | undefined, now: Date): number {
+  if (!lastHeartbeatDate) {
     return HEARTBEAT_INTERVAL_SECONDS * PLAYBACK_RATE_LIMIT + HEARTBEAT_SLACK_SECONDS;
   }
-  const elapsed = Math.max(0, (now.getTime() - lastHeartbeatAt.getTime()) / 1000);
+  const elapsed = Math.max(0, (now.getTime() - lastHeartbeatDate.getTime()) / 1000);
   return elapsed * PLAYBACK_RATE_LIMIT + HEARTBEAT_SLACK_SECONDS;
 }
 
@@ -146,8 +146,8 @@ function cloneProgress(progress: AssignmentProgress): AssignmentProgress {
     watchedSeconds: progress.watchedSeconds,
     lastPositionSeconds: progress.lastPositionSeconds,
     videoCompleted: progress.videoCompleted,
-    videoCompletedAt: progress.videoCompletedAt,
-    lastHeartbeatAt: progress.lastHeartbeatAt,
+    videoCompletedDate: progress.videoCompletedDate,
+    lastHeartbeatDate: progress.lastHeartbeatDate,
   };
 }
 
@@ -184,7 +184,7 @@ export function applyHeartbeat(
     throw new ProgressError(400, "That position is outside the video");
   }
 
-  const allowed = allowedWatchSeconds(progress.lastHeartbeatAt, now);
+  const allowed = allowedWatchSeconds(progress.lastHeartbeatDate, now);
   if (to - from > allowed + 0.001) {
     throw new ProgressError(400, "That watch range is too long for the time since the last update");
   }
@@ -205,8 +205,8 @@ export function applyHeartbeat(
     watchedSeconds,
     lastPositionSeconds: position,
     videoCompleted: progress.videoCompleted || reached,
-    videoCompletedAt: progress.videoCompletedAt ?? (reached ? now : undefined),
-    lastHeartbeatAt: now,
+    videoCompletedDate: progress.videoCompletedDate ?? (reached ? now : undefined),
+    lastHeartbeatDate: now,
   };
 
   return {
@@ -223,7 +223,7 @@ export function completeAssignment(
     return {
       ...input,
       progress: cloneProgress(input.progress),
-      completedAt: input.completedAt ?? now,
+      completedDate: input.completedDate ?? now,
     };
   }
   if (!input.progress.videoCompleted) {
@@ -233,7 +233,7 @@ export function completeAssignment(
     ...input,
     progress: cloneProgress(input.progress),
     status: "completed",
-    completedAt: now,
+    completedDate: now,
   };
 }
 

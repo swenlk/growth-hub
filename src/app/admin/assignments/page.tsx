@@ -137,7 +137,7 @@ export default async function AssignmentsPage({
                     <TableCell className={cell}>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className={`${cell} font-medium`}>{row.staffName}</TableCell>
                     <TableCell className={`${cell} font-medium`}>{row.courseTitle}</TableCell>
-                    <TableCell className={cell}>{formatDay(row.assignedAt)}</TableCell>
+                    <TableCell className={cell}>{formatDay(row.assignedDate)}</TableCell>
                     <TableCell className={cell}>
                       <span className="inline-flex flex-wrap items-center gap-2">
                         {formatDay(row.dueDate)}
@@ -150,7 +150,7 @@ export default async function AssignmentsPage({
                     <TableCell className={cell}>
                       <WatchedMeter percent={watchedPercent(row.watchedSeconds, row.durationSeconds)} />
                     </TableCell>
-                    <TableCell className={cell}>{formatDay(row.completedAt)}</TableCell>
+                    <TableCell className={cell}>{formatDay(row.completedDate)}</TableCell>
                     <TableCell className={cell}>
                       <Button asChild size="sm" variant="outline">
                         <Link

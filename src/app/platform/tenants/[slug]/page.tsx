@@ -83,7 +83,7 @@ export default async function TenantDetailPage({
               </div>
               <div>
                 <dt className="text-neutral-500 dark:text-neutral-300">Created</dt>
-                <dd className="mt-1 font-medium">{tenant.createdAt.toISOString().slice(0, 10)}</dd>
+                <dd className="mt-1 font-medium">{tenant.createdDate.toISOString().slice(0, 10)}</dd>
               </div>
             </dl>
           </section>

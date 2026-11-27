@@ -21,6 +21,6 @@ export interface AssignmentProgress {
   watchedSeconds: number;
   lastPositionSeconds: number;
   videoCompleted: boolean;
-  videoCompletedAt?: Date;
-  lastHeartbeatAt?: Date;
+  videoCompletedDate?: Date;
+  lastHeartbeatDate?: Date;
 }

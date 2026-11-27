@@ -34,6 +34,9 @@ type OldDoc = {
   tenant?: unknown;
   status?: unknown;
   createdAt?: unknown;
+  createdDate?: unknown;
+  updatedAt?: unknown;
+  updatedDate?: unknown;
   tenantId?: unknown;
   keycloakUserId?: unknown;
   assignments?: unknown;
@@ -46,7 +49,7 @@ type PlannedTenant = {
   id: string;
   name: string;
   status: "active" | "disabled";
-  createdAt?: Date;
+  createdDate?: Date;
   slug: string;
   slugSource: "map" | "stored" | "name";
   courses: OldDoc[];
@@ -137,10 +140,31 @@ function idString(value: unknown): string {
   return String(value);
 }
 
-function withoutTenantId(doc: OldDoc): Record<string, unknown> {
-  const copy = { ...doc } as Record<string, unknown>;
-  delete copy.tenantId;
+const STORED_DATE_FIELDS: Record<string, string> = {
+  createdAt: "createdDate",
+  updatedAt: "updatedDate",
+  assignedAt: "assignedDate",
+  completedAt: "completedDate",
+  videoCompletedAt: "videoCompletedDate",
+  lastHeartbeatAt: "lastHeartbeatDate",
+};
+
+function renameStoredDates(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(renameStoredDates);
+  if (!value || typeof value !== "object" || value instanceof Date) return value;
+  const source = value as Record<string, unknown>;
+  const copy: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(source)) {
+    if (key === "tenantId") continue;
+    const renamed = STORED_DATE_FIELDS[key];
+    if (renamed && source[renamed] !== undefined) continue;
+    copy[renamed ?? key] = renameStoredDates(item);
+  }
   return copy;
+}
+
+function withoutTenantId(doc: OldDoc): Record<string, unknown> {
+  return renameStoredDates(doc) as Record<string, unknown>;
 }
 
 function namespaceExists(error: unknown): boolean {
@@ -241,7 +265,12 @@ async function main() {
       id,
       name,
       status: tenant.status === "disabled" ? "disabled" : "active",
-      createdAt: tenant.createdAt instanceof Date ? tenant.createdAt : undefined,
+      createdDate:
+        tenant.createdDate instanceof Date
+          ? tenant.createdDate
+          : tenant.createdAt instanceof Date
+            ? tenant.createdAt
+            : undefined,
       slug: choice.slug,
       slugSource: choice.source,
       courses,
@@ -346,7 +375,7 @@ async function main() {
         name: tenant.name,
         tenant: tenant.slug,
         status: tenant.status,
-        ...(tenant.createdAt ? { createdAt: tenant.createdAt } : {}),
+        ...(tenant.createdDate ? { createdDate: tenant.createdDate } : {}),
       });
     }
 

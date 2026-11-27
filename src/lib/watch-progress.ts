@@ -32,7 +32,7 @@ export type WatchView = {
   durationSeconds: number;
   status: AssignmentStatus;
   dueDate: string | null;
-  completedAt: string | null;
+  completedDate: string | null;
   progress: {
     watchedSeconds: number;
     watchedPercent: number;
@@ -60,7 +60,7 @@ function viewOf(
     durationSeconds,
     status: assignment.status,
     dueDate: assignment.dueDate ? assignment.dueDate.toISOString() : null,
-    completedAt: assignment.completedAt ? assignment.completedAt.toISOString() : null,
+    completedDate: assignment.completedDate ? assignment.completedDate.toISOString() : null,
     progress: {
       watchedSeconds,
       watchedPercent: watchedPercent(watchedSeconds, durationSeconds),
@@ -119,9 +119,9 @@ export async function recordHeartbeat(
           "assignments.$[item].progress.watchedSeconds": next.progress.watchedSeconds,
           "assignments.$[item].progress.lastPositionSeconds": next.progress.lastPositionSeconds,
           "assignments.$[item].progress.videoCompleted": next.progress.videoCompleted,
-          "assignments.$[item].progress.lastHeartbeatAt": next.progress.lastHeartbeatAt,
-          ...(next.progress.videoCompletedAt
-            ? { "assignments.$[item].progress.videoCompletedAt": next.progress.videoCompletedAt }
+          "assignments.$[item].progress.lastHeartbeatDate": next.progress.lastHeartbeatDate,
+          ...(next.progress.videoCompletedDate
+            ? { "assignments.$[item].progress.videoCompletedDate": next.progress.videoCompletedDate }
             : {}),
         },
       },
@@ -153,7 +153,7 @@ export async function recordCompletion(
       assignmentId: assignment.assignmentId,
       status: assignment.status,
       progress: assignment.progress ?? emptyProgress(),
-      completedAt: assignment.completedAt,
+      completedDate: assignment.completedDate,
     },
     now,
   );
@@ -164,7 +164,7 @@ export async function recordCompletion(
       {
         $set: {
           "assignments.$[item].status": "completed",
-          "assignments.$[item].completedAt": next.completedAt,
+          "assignments.$[item].completedDate": next.completedDate,
         },
       },
       { arrayFilters: [{ "item.assignmentId": assignmentId }] },
@@ -178,7 +178,7 @@ export async function recordCompletion(
     {
       ...assignment,
       status: next.status,
-      completedAt: next.completedAt,
+      completedDate: next.completedDate,
       progress: next.progress,
     },
     course,

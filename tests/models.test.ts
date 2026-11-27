@@ -31,8 +31,13 @@ function main() {
   assert.equal(slug?.options.immutable, true);
   assert.equal(slug?.options.unique, true);
   assert.deepEqual(tenantSchema.path("status")?.options.enum, ["active", "disabled"]);
-  assert.ok(tenantSchema.path("createdAt"));
+  assert.ok(tenantSchema.path("createdDate"));
   assert.equal(tenantSchema.path("updatedAt"), undefined);
+  assert.equal(tenantSchema.path("updatedDate"), undefined);
+  assert.ok(courseSchema.path("createdDate"));
+  assert.ok(courseSchema.path("updatedDate"));
+  assert.ok(staffSchema.path("createdDate"));
+  assert.ok(staffSchema.path("updatedDate"));
 
   console.log("model tests passed");
 }
