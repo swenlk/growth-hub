@@ -1,0 +1,14 @@
+node_modules
+keycloak/providers/skip-update-password/target
+.next
+out
+dist
+.idea
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+
+media/*
+!media/.gitkeep

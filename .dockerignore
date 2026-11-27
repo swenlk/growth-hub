@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+dist
+.git
+.idea
+legacy
+media
+agent-transcripts
+
+.env
+.env.*
+!.env.example
+
+npm-debug.log*
+*.md
