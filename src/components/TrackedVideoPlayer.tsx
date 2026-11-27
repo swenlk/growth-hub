@@ -470,7 +470,7 @@ export function TrackedVideoPlayer({
       function goToClip(index: number, autoplay: boolean) {
         const list = clipsRef.current;
         if (!timeline || switching || index === clipCursor || index < 0 || index >= list.length) return;
-        if (index > playableThroughRef.current) return;
+        if (index > playableThroughRef.current && clipDoneRef.current[index] !== true) return;
         snapshot();
         void sendOpen(false);
         let nextOffset = 0;
@@ -567,7 +567,9 @@ export function TrackedVideoPlayer({
   const playableThrough = clipDone.findIndex((done) => !done);
   const openThrough = playableThrough === -1 ? playlist.length - 1 : playableThrough;
   const playableThroughRef = useRef(openThrough);
+  const clipDoneRef = useRef(clipDone);
   playableThroughRef.current = openThrough;
+  clipDoneRef.current = clipDone;
 
   return (
     <div className="space-y-4">
@@ -576,7 +578,7 @@ export function TrackedVideoPlayer({
           {playlist.map((clip, index) => {
             const selected = index === clipIndex;
             const done = clipDone[index] === true;
-            const clickable = index <= openThrough;
+            const clickable = done || index <= openThrough;
             return (
               <li key={clip.storedFileName}>
                 <button

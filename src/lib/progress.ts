@@ -74,6 +74,97 @@ export function sumRanges(ranges: WatchedRange[]): number {
   return roundSeconds(mergeRanges(ranges).reduce((total, [start, end]) => total + (end - start), 0));
 }
 
+export type TimelineClip = { id: string; durationSeconds: number };
+
+function clipStarts(clips: TimelineClip[]): number[] {
+  const starts: number[] = [];
+  let cursor = 0;
+  for (const clip of clips) {
+    starts.push(cursor);
+    cursor += Math.max(0, clip.durationSeconds);
+  }
+  return starts;
+}
+
+function coverageInside(ranges: WatchedRange[], start: number, duration: number): WatchedRange[] {
+  if (duration <= 0) return [];
+  const end = start + duration;
+  const local: WatchedRange[] = [];
+  for (const [from, to] of mergeRanges(ranges)) {
+    const left = Math.max(from, start);
+    const right = Math.min(to, end);
+    if (right > left) local.push([roundSeconds(left - start), roundSeconds(Math.min(right - start, duration))]);
+  }
+  return mergeRanges(local);
+}
+
+/**
+ * Watched time follows each video file. Inserting, removing, or reordering videos
+ * keeps coverage on the same files and leaves a new file unwatched.
+ */
+export function remapWatchProgress(
+  progress: AssignmentProgress,
+  previous: TimelineClip[],
+  next: TimelineClip[],
+): AssignmentProgress {
+  const unchanged =
+    previous.length === next.length &&
+    previous.every(
+      (clip, index) => clip.id === next[index]?.id && clip.durationSeconds === next[index]?.durationSeconds,
+    );
+  if (unchanged) return progress;
+
+  const previousStarts = clipStarts(previous);
+  const byFile = new Map<string, WatchedRange[]>();
+  previous.forEach((clip, index) => {
+    const local = coverageInside(progress.watchedRanges ?? [], previousStarts[index] ?? 0, clip.durationSeconds);
+    byFile.set(clip.id, mergeRanges([...(byFile.get(clip.id) ?? []), ...local]));
+  });
+
+  const nextStarts = clipStarts(next);
+  const moved: WatchedRange[] = [];
+  next.forEach((clip, index) => {
+    const start = nextStarts[index] ?? 0;
+    for (const [from, to] of byFile.get(clip.id) ?? []) {
+      const left = Math.max(0, from);
+      const right = Math.min(clip.durationSeconds, to);
+      if (right > left) moved.push([roundSeconds(start + left), roundSeconds(start + right)]);
+    }
+  });
+
+  const watchedRanges = mergeRanges(moved);
+  const watchedSeconds = sumRanges(watchedRanges);
+  const total = next.reduce((sum, clip) => sum + Math.max(0, clip.durationSeconds), 0);
+  const reached = total > 0 && watchedSeconds + 0.001 >= total * VIDEO_COMPLETE_RATIO;
+  const previousPosition = progress.lastPositionSeconds ?? 0;
+  let lastPositionSeconds = 0;
+  for (let index = 0; index < previous.length; index += 1) {
+    const clip = previous[index];
+    if (!clip) continue;
+    const start = previousStarts[index] ?? 0;
+    const end = start + clip.durationSeconds;
+    const holds =
+      previousPosition >= start - 0.001 &&
+      (previousPosition < end - 0.001 || (index === previous.length - 1 && previousPosition <= end + 0.001));
+    if (!holds) continue;
+    const nextIndex = next.findIndex((item) => item.id === clip.id);
+    const destination = next[nextIndex];
+    if (nextIndex < 0 || !destination) break;
+    const local = Math.min(destination.durationSeconds, Math.max(0, previousPosition - start));
+    lastPositionSeconds = roundSeconds((nextStarts[nextIndex] ?? 0) + local);
+    break;
+  }
+
+  return {
+    watchedRanges,
+    watchedSeconds,
+    lastPositionSeconds,
+    videoCompleted: reached,
+    ...(reached && progress.videoCompletedDate ? { videoCompletedDate: progress.videoCompletedDate } : {}),
+    ...(progress.lastHeartbeatDate ? { lastHeartbeatDate: progress.lastHeartbeatDate } : {}),
+  };
+}
+
 /**
  * A playback sample counts only when the media clock moved no faster than
  * 1.5× the real time since the previous sample. A seek returns null.

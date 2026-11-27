@@ -2,10 +2,14 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import type { Model, Types } from "mongoose";
+
 import { dueDateFromInput, emptyProgress } from "@/lib/assignment-view";
 import { courseDurationSeconds } from "@/lib/course-videos";
-import type { AssignmentStatus } from "@/lib/domain";
+import type { AssignmentProgress, AssignmentStatus } from "@/lib/domain";
+import { remapWatchProgress, type TimelineClip } from "@/lib/progress";
 import type { TenantContext } from "@/lib/rbac";
+import type { Staff } from "@/models/Staff";
 import { createAssignmentSchema, type CreateAssignmentInput } from "@/lib/validators";
 
 export class AssignmentError extends Error {}
@@ -192,4 +196,58 @@ export async function listAssignments(
 
   rows.sort((left, right) => right.assignedDate.getTime() - left.assignedDate.getTime());
   return rows;
+}
+
+function progressOf(progress: AssignmentProgress | null | undefined): AssignmentProgress {
+  return {
+    watchedRanges: (progress?.watchedRanges ?? []).map((range) => [Number(range[0]), Number(range[1])]),
+    watchedSeconds: progress?.watchedSeconds ?? 0,
+    lastPositionSeconds: progress?.lastPositionSeconds ?? 0,
+    videoCompleted: Boolean(progress?.videoCompleted),
+    ...(progress?.videoCompletedDate ? { videoCompletedDate: progress.videoCompletedDate } : {}),
+    ...(progress?.lastHeartbeatDate ? { lastHeartbeatDate: progress.lastHeartbeatDate } : {}),
+  };
+}
+
+/** Keep watched time on the same video files after the course playlist changes. */
+export async function realignCourseWatchProgress(
+  staff: Model<Staff>,
+  courseId: Types.ObjectId | string,
+  previous: TimelineClip[],
+  next: TimelineClip[],
+): Promise<void> {
+  const unchanged =
+    previous.length === next.length &&
+    previous.every((clip, index) => clip.id === next[index]?.id && clip.durationSeconds === next[index]?.durationSeconds);
+  if (unchanged) return;
+
+  const people = await staff.find({ "assignments.courseId": courseId });
+  for (const person of people) {
+    let dirty = false;
+    const assignments = person.assignments.map((assignment) => {
+      if (String(assignment.courseId) !== String(courseId)) return assignment;
+      dirty = true;
+      const mapped = remapWatchProgress(progressOf(assignment.progress), previous, next);
+      return {
+        assignmentId: assignment.assignmentId,
+        courseId: assignment.courseId,
+        assignedDate: assignment.assignedDate,
+        assignedBy: assignment.assignedBy,
+        ...(assignment.dueDate ? { dueDate: assignment.dueDate } : {}),
+        status: assignment.status,
+        ...(assignment.completedDate ? { completedDate: assignment.completedDate } : {}),
+        progress: {
+          watchedRanges: mapped.watchedRanges,
+          watchedSeconds: mapped.watchedSeconds,
+          lastPositionSeconds: mapped.lastPositionSeconds,
+          videoCompleted: mapped.videoCompleted,
+          ...(mapped.videoCompletedDate ? { videoCompletedDate: mapped.videoCompletedDate } : {}),
+          ...(mapped.lastHeartbeatDate ? { lastHeartbeatDate: mapped.lastHeartbeatDate } : {}),
+        },
+      };
+    });
+    if (!dirty) continue;
+    person.set("assignments", assignments);
+    await person.save();
+  }
 }

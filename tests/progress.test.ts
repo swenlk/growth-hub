@@ -9,6 +9,7 @@ import {
   continuousSpan,
   mergeRanges,
   playbackCredit,
+  remapWatchProgress,
   resumeSeconds,
   sumRanges,
   type AssignmentWatch,
@@ -138,6 +139,33 @@ function main() {
   );
   assert.equal(updated[0]?.progress.watchedSeconds, 5);
   assert.equal(updated[1]?.progress.watchedSeconds, 0);
+
+  const watchedBoth = emptyProgress();
+  watchedBoth.watchedRanges = [[0, 30]];
+  watchedBoth.watchedSeconds = 30;
+  watchedBoth.lastPositionSeconds = 30;
+  watchedBoth.videoCompleted = true;
+  watchedBoth.videoCompletedDate = at("2026-01-01T00:10:00.000Z");
+  const inserted = remapWatchProgress(
+    watchedBoth,
+    [
+      { id: "a", durationSeconds: 10 },
+      { id: "b", durationSeconds: 20 },
+    ],
+    [
+      { id: "a", durationSeconds: 10 },
+      { id: "c", durationSeconds: 5 },
+      { id: "b", durationSeconds: 20 },
+    ],
+  );
+  assert.deepEqual(inserted.watchedRanges, [
+    [0, 10],
+    [15, 35],
+  ]);
+  assert.equal(inserted.watchedSeconds, 30);
+  assert.equal(inserted.videoCompleted, false);
+  assert.equal(inserted.videoCompletedDate, undefined);
+  assert.equal(inserted.lastPositionSeconds, 35);
   assert.equal(updated[1]?.status, "assigned");
   assert.equal(first.progress.watchedSeconds, 0);
 

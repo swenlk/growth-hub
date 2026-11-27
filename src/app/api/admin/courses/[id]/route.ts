@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 
+import { realignCourseWatchProgress } from "@/lib/assignments";
 import { courseDocuments, courseVideos, type CourseVideoFile } from "@/lib/course-videos";
 import type { CourseDocument } from "@/models/Course";
 import { MediaError, removeStoredVideo, writeVideoUpload } from "@/lib/media";
@@ -146,6 +147,12 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     });
     await existing.save();
     storedNames = [];
+    await realignCourseWatchProgress(
+      ctx.models.Staff,
+      existing._id,
+      current.map((video) => ({ id: video.storedFileName, durationSeconds: video.durationSeconds })),
+      next.map((video) => ({ id: video.storedFileName, durationSeconds: video.durationSeconds })),
+    );
 
     await Promise.all(
       [...removed, ...removedDocuments].map((file) => removeStoredVideo(file.storedFileName, ctx.mediaDir).catch(() => undefined)),
