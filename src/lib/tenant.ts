@@ -11,8 +11,6 @@ import type { AppRole } from "@/lib/domain";
 export const SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 export const SLUG_MAX = 30;
 
-const DEFAULT_PLATFORM_DB = "growth_hub";
-const DEFAULT_DB_PREFIX = "growth_hub_";
 const RESERVED = new Set(["platform", "admin", "system", "local", "config"]);
 const SAFE_PREFIX = /^[A-Za-z0-9_-]+$/;
 const UNSAFE_DB_NAME = /[/\\."$\u0000]/;
@@ -26,9 +24,21 @@ export class TenantSlugError extends Error {
   }
 }
 
+function configuredDatabase(): string {
+  const raw = process.env.MONGODB_DATABASE;
+  if (typeof raw !== "string" || raw.trim() === "") {
+    throw new Error("MONGODB_DATABASE is not set");
+  }
+  const name = raw.trim();
+  if (!SAFE_PREFIX.test(name) || name.length >= 64) {
+    throw new Error("MONGODB_DATABASE must contain only letters, numbers, hyphens, and underscores");
+  }
+  return name;
+}
+
 function configuredPrefix(): string {
   const raw = process.env.TENANT_DB_PREFIX;
-  if (typeof raw !== "string" || raw.trim() === "") return DEFAULT_DB_PREFIX;
+  if (typeof raw !== "string" || raw.trim() === "") return `${configuredDatabase()}_`;
   return raw.trim();
 }
 
@@ -46,19 +56,15 @@ function assertSafeDbName(name: string): string {
   return name;
 }
 
-/** Prefix for tenant databases, as in growth_hub_<slug>. Read on each call. */
+/** Prefix for tenant databases. MONGODB_DATABASE plus "_" unless TENANT_DB_PREFIX is set. */
 export function dbPrefix(): string {
   return assertSafePrefix(configuredPrefix());
 }
 
-export const DB_PREFIX = dbPrefix();
-
-/** Control database. Holds the tenant registry. */
+/** Control database from MONGODB_DATABASE. Holds the tenant registry. */
 export function platformDbName(): string {
-  return assertSafeDbName(DEFAULT_PLATFORM_DB);
+  return assertSafeDbName(configuredDatabase());
 }
-
-export const PLATFORM_DB = platformDbName();
 
 /**
  * Accept only a lowercase slug. This does not trim or lowercase.

@@ -1,6 +1,6 @@
 /**
  * Wipe leftover test data in the old shared database and loose video files.
- * Tenant databases (growth_hub_<slug>) and per-tenant media folders are left alone.
+ * Tenant databases (<MONGODB_DATABASE>_<slug>) and per-tenant media folders are left alone.
  *
  *   npm run reset:dev
  *   npm run reset:dev -- --yes
@@ -51,7 +51,6 @@ async function main() {
 
   const sourceName = assertMigrationSource(
     sourceDatabaseName({
-      databaseEnv: process.env.MONGODB_DATABASE,
       uri: process.env.MONGODB_URI,
     }),
     platformDbName(),

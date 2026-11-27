@@ -7,6 +7,8 @@ import { resolve } from "node:path";
 
 import mongoose from "mongoose";
 
+import { platformDbName } from "../src/lib/tenant";
+
 function loadEnvFiles() {
   for (const filename of [".env", ".env.local"]) {
     const path = resolve(process.cwd(), filename);
@@ -35,7 +37,7 @@ async function main() {
   if (!uri) throw new Error("MONGODB_URI is not set");
 
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-  const coll = mongoose.connection.useDb("growth_hub").collection("tenants");
+  const coll = mongoose.connection.useDb(platformDbName()).collection("tenants");
   const renamed = await coll.updateMany(
     { slug: { $exists: true }, tenant: { $exists: false } },
     { $rename: { slug: "tenant" } },

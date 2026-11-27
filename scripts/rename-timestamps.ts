@@ -7,6 +7,8 @@ import { resolve } from "node:path";
 
 import mongoose from "mongoose";
 
+import { dbPrefix, platformDbName } from "../src/lib/tenant";
+
 function loadEnvFiles() {
   for (const filename of [".env", ".env.local"]) {
     const path = resolve(process.cwd(), filename);
@@ -95,7 +97,8 @@ async function main() {
   loadEnvFiles();
   const uri = process.env.MONGODB_URI?.trim();
   if (!uri) throw new Error("MONGODB_URI is not set");
-  const prefix = process.env.TENANT_DB_PREFIX?.trim() || "growth_hub_";
+  const prefix = dbPrefix();
+  const platform = platformDbName();
 
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
   const admin = mongoose.connection.db?.admin();
@@ -107,7 +110,7 @@ async function main() {
     const name = entry.name;
     if (name === "admin" || name === "local" || name === "config") continue;
     const db = mongoose.connection.useDb(name);
-    if (name === "growth_hub") {
+    if (name === platform) {
       changed += await renameField(db.collection("tenants"), "createdAt", "createdDate");
       continue;
     }

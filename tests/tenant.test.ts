@@ -5,7 +5,6 @@ import path from "node:path";
 
 import { createTenantSchema } from "../src/lib/validators";
 import {
-  PLATFORM_DB,
   SLUG_MAX,
   TenantSlugError,
   assertValidSlug,
@@ -35,15 +34,37 @@ function rejects(slug: string) {
 }
 
 async function main() {
-  withEnv("TENANT_DB_PREFIX", undefined, () => {
-    assert.equal(dbPrefix(), "growth_hub_");
-    assert.equal(platformDbName(), "growth_hub");
-    assert.equal(PLATFORM_DB, "growth_hub");
-    assert.equal(assertValidSlug("abc"), "abc");
-    assert.equal(tenantDbName("abc"), "growth_hub_abc");
-    assert.equal(tenantDbName("acme-west-2"), "growth_hub_acme-west-2");
-    assert.equal(assertValidSlug("a".repeat(SLUG_MAX)), "a".repeat(SLUG_MAX));
-    assert.equal(tenantDbName("a".repeat(SLUG_MAX)).length < 64, true);
+  withEnv("MONGODB_DATABASE", "growth_hub", () => {
+    withEnv("TENANT_DB_PREFIX", undefined, () => {
+      assert.equal(platformDbName(), "growth_hub");
+      assert.equal(dbPrefix(), "growth_hub_");
+      assert.equal(assertValidSlug("abc"), "abc");
+      assert.equal(tenantDbName("abc"), "growth_hub_abc");
+      assert.equal(tenantDbName("acme-west-2"), "growth_hub_acme-west-2");
+      assert.equal(assertValidSlug("a".repeat(SLUG_MAX)), "a".repeat(SLUG_MAX));
+      assert.equal(tenantDbName("a".repeat(SLUG_MAX)).length < 64, true);
+    });
+    withEnv("TENANT_DB_PREFIX", "custom_", () => {
+      assert.equal(platformDbName(), "growth_hub");
+      assert.equal(dbPrefix(), "custom_");
+      assert.equal(tenantDbName("abc"), "custom_abc");
+    });
+  });
+
+  withEnv("MONGODB_DATABASE", undefined, () => {
+    withEnv("TENANT_DB_PREFIX", undefined, () => {
+      assert.throws(() => platformDbName(), /MONGODB_DATABASE is not set/);
+      assert.throws(() => dbPrefix(), /MONGODB_DATABASE is not set/);
+    });
+  });
+  withEnv("MONGODB_DATABASE", "not a name", () => {
+    assert.throws(() => platformDbName(), /MONGODB_DATABASE/);
+  });
+  withEnv("MONGODB_DATABASE", "acme", () => {
+    withEnv("TENANT_DB_PREFIX", undefined, () => {
+      assert.equal(platformDbName(), "acme");
+      assert.equal(tenantDbName("abc"), "acme_abc");
+    });
   });
 
   for (const slug of [
@@ -56,7 +77,8 @@ async function main() {
     assert.equal(assertValidSlug(slug), slug);
   }
 
-  for (const slug of [
+  withEnv("MONGODB_DATABASE", "growth_hub", () => {
+    for (const slug of [
     "../x",
     "..",
     ".",
@@ -84,21 +106,24 @@ async function main() {
     "local",
     "config",
     "a\u0000b",
-  ]) {
-    rejects(slug);
-  }
+    ]) {
+      rejects(slug);
+    }
 
-  withEnv("TENANT_DB_PREFIX", "../", () => {
-    assert.throws(() => dbPrefix(), /TENANT_DB_PREFIX/);
-    assert.throws(() => tenantDbName("abc"), /TENANT_DB_PREFIX/);
-    assert.equal(platformDbName(), "growth_hub");
+    withEnv("MONGODB_DATABASE", "growth_hub", () => {
+    withEnv("TENANT_DB_PREFIX", "../", () => {
+      assert.throws(() => dbPrefix(), /TENANT_DB_PREFIX/);
+      assert.throws(() => tenantDbName("abc"), /TENANT_DB_PREFIX/);
+      assert.equal(platformDbName(), "growth_hub");
+    });
   });
-  withEnv("TENANT_DB_PREFIX", "growth.hub-", () => {
-    assert.throws(() => tenantDbName("abc"), /TENANT_DB_PREFIX/);
-  });
-  withEnv("TENANT_DB_PREFIX", "x".repeat(40), () => {
-    assert.throws(() => tenantDbName("a".repeat(SLUG_MAX)), /Tenant database name/);
-    assert.equal(tenantDbName("abc"), `${"x".repeat(40)}abc`);
+    withEnv("TENANT_DB_PREFIX", "growth.hub-", () => {
+      assert.throws(() => tenantDbName("abc"), /TENANT_DB_PREFIX/);
+    });
+    withEnv("TENANT_DB_PREFIX", "x".repeat(40), () => {
+      assert.throws(() => tenantDbName("a".repeat(SLUG_MAX)), /Tenant database name/);
+      assert.equal(tenantDbName("abc"), `${"x".repeat(40)}abc`);
+    });
   });
 
   const root = await mkdtemp(path.join(tmpdir(), "tenant-media-"));
