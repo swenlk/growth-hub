@@ -90,7 +90,7 @@ function adminBaseUrl(): string {
     return new URL(process.env.KEYCLOAK_ISSUER).origin;
   }
 
-  return "http://localhost:8080";
+  return "http://localhost:8090";
 }
 
 async function waitForKeycloak(baseUrl: string) {
@@ -632,8 +632,8 @@ async function main() {
   console.log(`KEYCLOAK_ADMIN_CLIENT_ID=${ADMIN_CLIENT_ID}`);
   console.log(`KEYCLOAK_ADMIN_CLIENT_SECRET=${adminSecret}`);
   console.log("");
-  console.log("On the host, KEYCLOAK_INTERNAL_URL=http://localhost:8080");
-  console.log("Inside Compose, the web service sets KEYCLOAK_INTERNAL_URL=http://keycloak:8080");
+  console.log("On the host, KEYCLOAK_INTERNAL_URL=http://localhost:8090");
+  console.log("Inside Compose, the web service sets KEYCLOAK_INTERNAL_URL=http://keycloak:8090");
   if (microsoft) {
     console.log("");
     console.log(`Microsoft sign-in is enabled. Entra redirect URI: ${env.baseUrl}/realms/${REALM}/broker/microsoft/endpoint`);

@@ -59,7 +59,7 @@ KEYCLOAK_ADMIN_CLIENT_ID=growth-hub-admin
 KEYCLOAK_ADMIN_CLIENT_SECRET=...
 ```
 
-Keep `KEYCLOAK_INTERNAL_URL=http://localhost:8080`. The web container sets `http://keycloak:8080` itself.
+Keep `KEYCLOAK_INTERNAL_URL=http://localhost:8090`. The web container sets `http://keycloak:8090` itself.
 
 ### 6. App
 
@@ -78,7 +78,7 @@ docker compose ps
 
 - App: http://localhost:3002
 - Health: http://localhost:3002/api/health
-- Keycloak admin: http://localhost:8080/admin
+- Keycloak admin: http://localhost:8090/admin
 
 Create the first user in realm `growth-hub` with realm role `super_admin`, then sign in at http://localhost:3002/login.
 
@@ -109,7 +109,7 @@ Before the host is public:
 - Set `AUTH_URL=https://<app-host>` and `KEYCLOAK_ISSUER=https://<auth-host>/realms/growth-hub`.
 - Set `KC_HOSTNAME` in `.env` to the public Keycloak origin, and in `docker-compose.yml` change Keycloak `start-dev` to `start`.
 - In Keycloak, set the web client redirect URI, web origin, and post-logout URI to `https://<app-host>`, and require HTTPS. `npm run setup:keycloak` writes `http://localhost:3002` and `sslRequired=NONE` again, so do not re-run it until the script matches those public URLs.
-- Put TLS in front of ports 3002 and 8080.
+- Put TLS in front of ports 3002 and 8090.
 - Back up MySQL database `growth-hub`, MongoDB database `growth_hub`, and `./media`.
 
 ```powershell
