@@ -34,7 +34,7 @@ function webm(bytes = 64): Buffer {
 function multipart(
   fields: Record<string, string>,
   file: { name: string; type: string; data: Buffer },
-  extraFile?: { name: string; type: string; data: Buffer },
+  extraFile?: { name: string; type: string; data: Buffer; durationSeconds?: string },
 ) {
   const boundary = "----mediatest";
   const chunks: Buffer[] = [];
@@ -45,7 +45,14 @@ function multipart(
       ),
     );
   }
-  const pushFile = (part: { name: string; type: string; data: Buffer }) => {
+  const pushFile = (part: { name: string; type: string; data: Buffer; durationSeconds?: string }) => {
+    if (part.durationSeconds) {
+      chunks.push(
+        Buffer.from(
+          `--${boundary}\r\nContent-Disposition: form-data; name="durationSeconds"\r\n\r\n${part.durationSeconds}\r\n`,
+        ),
+      );
+    }
     chunks.push(
       Buffer.from(
         `--${boundary}\r\nContent-Disposition: form-data; name="video"; filename="${part.name}"\r\nContent-Type: ${part.type}\r\n\r\n`,
@@ -56,6 +63,22 @@ function multipart(
   };
   pushFile(file);
   if (extraFile) pushFile(extraFile);
+  chunks.push(Buffer.from(`--${boundary}--\r\n`));
+  return new Request("http://localhost/api/admin/courses", {
+    method: "POST",
+    headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
+    body: Buffer.concat(chunks),
+  });
+}
+
+function fieldsOnly(fields: Record<string, string>, keep: string[]) {
+  const boundary = "----mediatest";
+  const chunks: Buffer[] = [];
+  const pushField = (key: string, value: string) => {
+    chunks.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`));
+  };
+  for (const [key, value] of Object.entries(fields)) pushField(key, value);
+  for (const name of keep) pushField("keep", name);
   chunks.push(Buffer.from(`--${boundary}--\r\n`));
   return new Request("http://localhost/api/admin/courses", {
     method: "POST",
@@ -190,6 +213,34 @@ async function main() {
           ),
           { root, maxBytes: 1024 },
         ),
+      (error: unknown) => error instanceof MediaError && error.status === 400,
+    );
+
+    const multi = await writeVideoUpload(
+      multipart(
+        { title: "Two parts", durationSeconds: "10" },
+        { name: "a.mp4", type: "video/mp4", data: mp4(32) },
+        { name: "b.webm", type: "video/webm", data: webm(32), durationSeconds: "4" },
+      ),
+      { root, maxBytes: 1024 },
+    );
+    assert.equal(multi.videos.length, 2);
+    assert.equal(multi.videos[0]?.durationSeconds, 10);
+    assert.equal(multi.videos[1]?.durationSeconds, 4);
+    assert.ok(multi.videos[1]?.storedFileName.endsWith(".webm"));
+    assert.deepEqual(multi.keep, []);
+
+    const keptOnly = await writeVideoUpload(fieldsOnly({ title: "Kept", description: "Still here" }, [`${id}.mp4`]), {
+      root,
+      requireFile: false,
+    });
+    assert.equal(keptOnly.videos.length, 0);
+    assert.deepEqual(keptOnly.keep, [`${id}.mp4`]);
+    assert.equal(keptOnly.title, "Kept");
+    assert.equal(keptOnly.description, "Still here");
+
+    await assert.rejects(
+      () => writeVideoUpload(fieldsOnly({ title: "Empty" }, []), { root }),
       (error: unknown) => error instanceof MediaError && error.status === 400,
     );
 

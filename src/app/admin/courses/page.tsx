@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { CourseStatus } from "@/lib/domain";
+import { courseDurationSeconds, courseSizeBytes } from "@/lib/course-videos";
 import { formatBytes, formatDuration } from "@/lib/format";
 import { readChoice, readText, withListQuery } from "@/lib/list-search";
 import { getTenantContext, requireRole } from "@/lib/rbac";
@@ -59,7 +60,7 @@ export default async function CoursesPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Courses" text="Library" hint="Each course is one video. Open it to see who is assigned." />
+      <DashboardBreadcrumb title="Courses" text="Library" hint="A course can include more than one video. Open it to see who is assigned." />
       <div className="card flex flex-1 flex-col !h-auto">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <form method="get" className="flex flex-wrap items-center gap-3">
@@ -104,8 +105,8 @@ export default async function CoursesPage({
                   <TableRow key={String(course._id)}>
                     <TableCell className={cell}>{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className={`${cell} font-medium`}>{course.title}</TableCell>
-                    <TableCell className={cell}>{formatDuration(course.video.durationSeconds)}</TableCell>
-                    <TableCell className={cell}>{formatBytes(course.video.sizeBytes)}</TableCell>
+                    <TableCell className={cell}>{formatDuration(courseDurationSeconds(course))}</TableCell>
+                    <TableCell className={cell}>{formatBytes(courseSizeBytes(course))}</TableCell>
                     <TableCell className={cell}>
                       <StatusBadge status={course.status} label={course.status === "archived" ? "Inactive" : undefined} />
                     </TableCell>

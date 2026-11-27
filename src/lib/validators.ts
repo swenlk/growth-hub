@@ -94,15 +94,22 @@ export const updateStaffSchema = z
   })
   .strict();
 
-export const courseDetailsSchema = z
+export const videoDurationSchema = z
+  .number()
+  .finite()
+  .positive()
+  .max(24 * 60 * 60, "Video length must be under 24 hours");
+
+export const courseTextSchema = z
   .object({
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().max(4000).optional(),
-    durationSeconds: z
-      .number()
-      .finite()
-      .positive()
-      .max(24 * 60 * 60, "Video length must be under 24 hours"),
+  })
+  .strict();
+
+export const courseDetailsSchema = courseTextSchema
+  .extend({
+    durationSeconds: videoDurationSchema,
   })
   .strict();
 

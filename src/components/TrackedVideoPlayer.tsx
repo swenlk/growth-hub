@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,6 +15,7 @@ import {
   playbackCredit,
   resumeSeconds,
   sumRanges,
+  VIDEO_COMPLETE_RATIO,
 } from "@/lib/progress";
 
 type ProgressState = {
@@ -26,31 +28,60 @@ type ProgressState = {
 
 type OpenRange = { from: number; to: number };
 type AssignmentStatus = "assigned" | "in_progress" | "completed";
+type CourseClip = {
+  storedFileName: string;
+  originalFileName: string;
+  durationSeconds: number;
+};
+
+function clipPlacement(clips: CourseClip[], global: number) {
+  let offset = 0;
+  for (let index = 0; index < clips.length; index += 1) {
+    const duration = clips[index]?.durationSeconds ?? 0;
+    const end = offset + duration;
+    if (global < end - 0.25 || index === clips.length - 1) {
+      return { index, offset, local: Math.min(Math.max(global - offset, 0), Math.max(duration, 0)) };
+    }
+    offset = end;
+  }
+  return { index: 0, offset: 0, local: 0 };
+}
 
 export function TrackedVideoPlayer({
   assignmentId,
   courseId,
   durationSeconds,
+  clips,
   initial,
   initialStatus,
 }: {
   assignmentId: string;
   courseId: string;
   durationSeconds: number;
+  clips?: CourseClip[];
   initial: ProgressState;
   initialStatus: AssignmentStatus;
 }) {
+  const playlist = clips ?? [];
+  const timeline = playlist.length > 1;
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const rangesRef = useRef<WatchedRange[]>(seedRanges(initial));
   const flushRef = useRef<(beacon: boolean) => Promise<void>>(async () => undefined);
+  const chooseClipRef = useRef<(index: number) => void>(() => undefined);
+  const startNextRef = useRef<(index: number) => void>(() => undefined);
+  const clipsRef = useRef(playlist);
+  clipsRef.current = playlist;
   const [startAt] = useState(() =>
     resumeSeconds(seedRanges(initial), initial.lastPositionSeconds, durationSeconds),
   );
+  const placement = timeline ? clipPlacement(playlist, startAt) : { index: 0, offset: 0, local: startAt };
+  const [clipIndex, setClipIndex] = useState(placement.index);
   const [progress, setProgress] = useState(initial);
   const [status, setStatus] = useState(initialStatus);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [nextPrompt, setNextPrompt] = useState<number | null>(null);
 
   useEffect(() => {
     let cancel = false;
@@ -88,7 +119,16 @@ export function TrackedVideoPlayer({
     return watch(element);
 
     function watch(video: HTMLVideoElement) {
+      let mediaOffset = placement.offset;
+      let clipCursor = placement.index;
+      let switching = false;
+      let autoplayNext = false;
+      let pendingLocal = 0;
       const anchor: { current: { media: number; wall: number } | null } = { current: null };
+
+      function positionOf() {
+        return mediaOffset + video.currentTime;
+      }
       const open: { current: OpenRange | null } = { current: null };
       const backlog: OpenRange[] = [];
       let inflightRange: OpenRange | null = null;
@@ -117,7 +157,8 @@ export function TrackedVideoPlayer({
 
       function paint(position: number) {
         if (stopped) return;
-        const watchedSeconds = sumRanges(collect());
+        const ranges = collect();
+        const watchedSeconds = sumRanges(ranges);
         setProgress((current) => {
           const seconds = Math.max(current.watchedSeconds, watchedSeconds);
           return {
@@ -125,6 +166,7 @@ export function TrackedVideoPlayer({
             watchedSeconds: seconds,
             watchedPercent: watchedPercent(seconds, durationSeconds),
             lastPositionSeconds: position,
+            watchedRanges: ranges,
           };
         });
       }
@@ -213,7 +255,7 @@ export function TrackedVideoPlayer({
             inflightRange = null;
             restore(range);
             setNotice(payload?.error ?? "Progress could not be saved");
-            paint(video.currentTime);
+            paint(positionOf());
             return false;
           }
           const saved = seedRanges(payload.progress);
@@ -224,6 +266,7 @@ export function TrackedVideoPlayer({
           ]);
           inflightRange = null;
           const watchedSeconds = sumRanges(collect());
+          const ranges = collect();
           setProgress((current) => {
             const seconds = Math.max(current.watchedSeconds, watchedSeconds);
             return {
@@ -232,6 +275,7 @@ export function TrackedVideoPlayer({
               watchedSeconds: seconds,
               watchedPercent: watchedPercent(seconds, durationSeconds),
               videoCompleted: current.videoCompleted || payload.progress?.videoCompleted || false,
+              watchedRanges: ranges,
             };
           });
           if (payload.status) setStatus(payload.status);
@@ -264,8 +308,8 @@ export function TrackedVideoPlayer({
       }
 
       function notePlayback(force: boolean) {
-        if (stopped || video.seeking) return;
-        const media = video.currentTime;
+        if (stopped || video.seeking || switching) return;
+        const media = positionOf();
         const wall = performance.now();
         const previous = anchor.current;
         if (!previous) {
@@ -298,13 +342,33 @@ export function TrackedVideoPlayer({
         paint(media);
       }
 
+      function armClip(local: number) {
+        const media = mediaOffset + local;
+        anchor.current = { media, wall: performance.now() };
+        open.current = { from: media, to: media };
+      }
+
       function onLoadedMetadata() {
+        if (switching) {
+          const local = pendingLocal;
+          if (Math.abs(video.currentTime - local) >= 0.05) {
+            video.currentTime = local;
+            return;
+          }
+          switching = false;
+          armClip(video.currentTime);
+          if (autoplayNext) {
+            autoplayNext = false;
+            void video.play().catch(() => undefined);
+          }
+          return;
+        }
         if (resumed) return;
         resumed = true;
         const at = startAt;
         if (at > 1 && at < durationSeconds - 0.5) {
           suppressSeekNotice = true;
-          video.currentTime = at;
+          video.currentTime = timeline ? Math.max(0, at - mediaOffset) : at;
           anchor.current = { media: at, wall: performance.now() };
           open.current = { from: at, to: at };
           window.setTimeout(() => {
@@ -312,14 +376,15 @@ export function TrackedVideoPlayer({
           }, 800);
           return;
         }
-        const media = video.currentTime;
+        const media = positionOf();
         anchor.current = { media, wall: performance.now() };
         open.current = { from: media, to: media };
       }
 
       function onPlay() {
         hasPlayed = true;
-        const media = video.currentTime;
+        setNextPrompt(null);
+        const media = positionOf();
         anchor.current = { media, wall: performance.now() };
         if (!open.current || media > open.current.to + 0.05 || media < open.current.from - 0.05) {
           open.current = { from: media, to: media };
@@ -327,12 +392,22 @@ export function TrackedVideoPlayer({
       }
 
       function onSeeking() {
-        seekOrigin = anchor.current?.media ?? open.current?.to ?? video.currentTime;
+        if (switching) return;
+        seekOrigin = anchor.current?.media ?? open.current?.to ?? positionOf();
         snapshot();
       }
 
       function onSeeked() {
-        const media = video.currentTime;
+        if (switching) {
+          switching = false;
+          armClip(video.currentTime);
+          if (autoplayNext) {
+            autoplayNext = false;
+            void video.play().catch(() => undefined);
+          }
+          return;
+        }
+        const media = positionOf();
         const origin = seekOrigin;
         anchor.current = { media, wall: performance.now() };
         open.current = { from: media, to: media };
@@ -354,24 +429,33 @@ export function TrackedVideoPlayer({
         void sendOpen(false);
       }
 
-      function bridgeToEnd(end: number) {
-        if (!(durationSeconds - end <= 1.5) || !(end > 0)) return;
+      function bridgeTo(end: number, target: number) {
+        if (!(target - end <= 1.5) || !(end > 0)) return;
         if (open.current && end >= open.current.from - 0.05 && end <= open.current.to + 1.5) {
-          open.current.to = durationSeconds;
+          open.current.to = target;
           return;
         }
         const last = backlog[backlog.length - 1];
-        if (last && durationSeconds - last.to <= 1.5 && end <= last.to + 1.5) {
-          last.to = durationSeconds;
+        if (last && target - last.to <= 1.5 && end <= last.to + 1.5) {
+          last.to = target;
         }
       }
 
       function onEnded() {
         notePlayback(true);
-        const end = open.current?.to ?? anchor.current?.media ?? video.currentTime;
-        bridgeToEnd(end);
-        anchor.current = { media: Math.min(video.currentTime, durationSeconds), wall: performance.now() };
-        paint(Math.min(video.currentTime, durationSeconds));
+        const end = open.current?.to ?? anchor.current?.media ?? positionOf();
+        const list = clipsRef.current;
+        if (timeline && clipCursor < list.length - 1) {
+          const boundary = mediaOffset + (list[clipCursor]?.durationSeconds ?? 0);
+          bridgeTo(end, boundary);
+          paint(Math.min(boundary, durationSeconds));
+          setNextPrompt(clipCursor + 1);
+          void sendOpen(false).then(() => sendOpen(false));
+          return;
+        }
+        bridgeTo(end, durationSeconds);
+        anchor.current = { media: Math.min(positionOf(), durationSeconds), wall: performance.now() };
+        paint(Math.min(positionOf(), durationSeconds));
         void sendOpen(false).then(() => sendOpen(false));
       }
 
@@ -383,6 +467,27 @@ export function TrackedVideoPlayer({
         void sendOpen(true);
       }
 
+      function goToClip(index: number, autoplay: boolean) {
+        const list = clipsRef.current;
+        if (!timeline || switching || index === clipCursor || index < 0 || index >= list.length) return;
+        if (index > playableThroughRef.current) return;
+        snapshot();
+        void sendOpen(false);
+        let nextOffset = 0;
+        for (let cursor = 0; cursor < index; cursor += 1) nextOffset += list[cursor]?.durationSeconds ?? 0;
+        switching = true;
+        autoplayNext = autoplay;
+        pendingLocal = 0;
+        mediaOffset = nextOffset;
+        clipCursor = index;
+        setClipIndex(index);
+        setNextPrompt(null);
+      }
+      chooseClipRef.current = (index: number) => goToClip(index, false);
+      startNextRef.current = (index: number) => {
+        if (index > playableThroughRef.current) playableThroughRef.current = index;
+        goToClip(index, true);
+      };
       flushRef.current = (beacon) => sendOpen(beacon);
       const sampleTimer = window.setInterval(() => {
         if (video.paused || video.ended || video.seeking) return;
@@ -411,6 +516,8 @@ export function TrackedVideoPlayer({
 
       return () => {
         stopped = true;
+        chooseClipRef.current = () => undefined;
+        startNextRef.current = () => undefined;
         flushRef.current = async () => undefined;
         if (retry !== null) window.clearTimeout(retry);
         window.clearInterval(sampleTimer);
@@ -428,7 +535,7 @@ export function TrackedVideoPlayer({
         window.removeEventListener("beforeunload", onUnload);
       };
     }
-  }, [assignmentId, durationSeconds, startAt]);
+  }, [assignmentId, durationSeconds, placement.index, placement.offset, startAt, timeline]);
 
   async function markComplete() {
     setSaving(true);
@@ -454,9 +561,58 @@ export function TrackedVideoPlayer({
   }
 
   const showResume = status !== "completed" && startAt > 1 && startAt < durationSeconds - 1.5;
+  const nextClip = nextPrompt === null ? undefined : playlist[nextPrompt];
+  const watchedRanges = progress.watchedRanges ?? [];
+  const clipDone = playlist.map((_, index) => clipWatched(playlist, watchedRanges, index));
+  const playableThrough = clipDone.findIndex((done) => !done);
+  const openThrough = playableThrough === -1 ? playlist.length - 1 : playableThrough;
+  const playableThroughRef = useRef(openThrough);
+  playableThroughRef.current = openThrough;
 
   return (
     <div className="space-y-4">
+      {timeline ? (
+        <ul className="space-y-2">
+          {playlist.map((clip, index) => {
+            const selected = index === clipIndex;
+            const done = clipDone[index] === true;
+            const clickable = index <= openThrough;
+            return (
+              <li key={clip.storedFileName}>
+                <button
+                  type="button"
+                  aria-disabled={!clickable}
+                  onClick={() => {
+                    if (clickable) chooseClipRef.current(index);
+                  }}
+                  className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm ${
+                    clickable ? "" : "opacity-60"
+                  } ${
+                    selected
+                      ? "border-primary text-primary"
+                      : "border-neutral-200 text-neutral-700 dark:border-slate-600 dark:text-neutral-200"
+                  }`}
+                >
+                  <span className="min-w-0 truncate">
+                    {index + 1}. {videoName(clip.originalFileName)}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2 text-neutral-500">
+                    {formatDuration(clip.durationSeconds)}
+                    <span
+                      className={`flex size-4 items-center justify-center rounded-full border ${
+                        done ? "border-primary bg-primary text-white" : "border-neutral-400 bg-white dark:bg-transparent"
+                      }`}
+                      aria-label={done ? "Watched" : "Not watched"}
+                    >
+                      {done ? <Check className="size-3" strokeWidth={3} /> : null}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
       <video
         ref={videoRef}
         controls
@@ -464,8 +620,27 @@ export function TrackedVideoPlayer({
         preload="metadata"
         playsInline
         className="max-h-[480px] w-full rounded-md bg-black"
-        src={`/api/media/${courseId}`}
+        src={
+          timeline
+            ? `/api/media/${courseId}?video=${encodeURIComponent(playlist[clipIndex]?.storedFileName ?? "")}`
+            : `/api/media/${courseId}`
+        }
       />
+      {nextClip ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-neutral-200 px-3 py-3 dark:border-slate-600">
+          <p className="text-sm text-neutral-700 dark:text-neutral-200">
+            This video is finished. Watch {videoName(nextClip.originalFileName)} next?
+          </p>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => setNextPrompt(null)}>
+              Not now
+            </Button>
+            <Button type="button" size="sm" onClick={() => startNextRef.current(nextPrompt ?? 0)}>
+              Watch next
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <div>
         <div className="mb-1 flex justify-between text-sm text-neutral-500 dark:text-neutral-300">
           <span>Watched {progress.watchedPercent}%</span>
@@ -514,4 +689,23 @@ function round3(value: number): number {
 
 function fit(value: number, durationSeconds: number): number {
   return Math.min(durationSeconds, Math.max(0, round3(Math.min(value, durationSeconds))));
+}
+
+function videoName(fileName: string): string {
+  return fileName.replace(/\.(mp4|webm)$/i, "");
+}
+
+function clipWatched(clips: CourseClip[], ranges: WatchedRange[], index: number): boolean {
+  const duration = clips[index]?.durationSeconds ?? 0;
+  if (duration <= 0) return false;
+  let start = 0;
+  for (let cursor = 0; cursor < index; cursor += 1) start += clips[cursor]?.durationSeconds ?? 0;
+  let covered = 0;
+  const end = start + duration;
+  for (const [from, to] of mergeRanges(ranges)) {
+    const left = Math.max(from, start);
+    const right = Math.min(to, end);
+    if (right > left) covered += right - left;
+  }
+  return covered + 0.001 >= duration * VIDEO_COMPLETE_RATIO;
 }

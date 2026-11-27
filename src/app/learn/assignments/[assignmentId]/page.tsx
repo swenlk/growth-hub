@@ -5,6 +5,7 @@ import { TrackedVideoPlayer } from "@/components/TrackedVideoPlayer";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { assignmentStatusLabel, formatDay, isOverdue, watchedPercent } from "@/lib/assignment-view";
+import { courseDurationSeconds, courseVideos } from "@/lib/course-videos";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 import { z } from "zod";
 
@@ -29,6 +30,8 @@ export default async function AssignmentPlayerPage({
   if (!assignment) notFound();
   const course = await models.Course.findById(assignment.courseId).lean();
   if (!course) notFound();
+  const videos = courseVideos(course);
+  const durationSeconds = courseDurationSeconds(course);
 
   return (
     <>
@@ -37,7 +40,7 @@ export default async function AssignmentPlayerPage({
         <h6 className="text-lg font-semibold">{course.title}</h6>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-neutral-500 dark:text-neutral-300">
           <StatusBadge status={assignment.status} label={assignmentStatusLabel(assignment.status)} />
-          <span>{watchedPercent(assignment.progress?.watchedSeconds ?? 0, course.video.durationSeconds)}% watched</span>
+          <span>{watchedPercent(assignment.progress?.watchedSeconds ?? 0, durationSeconds)}% watched</span>
           <span>{assignment.dueDate ? `Due ${formatDay(assignment.dueDate)}` : "No due date"}</span>
           {isOverdue(assignment) ? <span className="font-medium text-destructive">Overdue</span> : null}
           {assignment.completedAt ? <span>Completed {formatDay(assignment.completedAt)}</span> : null}
@@ -51,14 +54,16 @@ export default async function AssignmentPlayerPage({
           <TrackedVideoPlayer
             assignmentId={assignment.assignmentId}
             courseId={course._id.toString()}
-            durationSeconds={course.video.durationSeconds}
+            durationSeconds={durationSeconds}
+            clips={videos.map((video) => ({
+              storedFileName: video.storedFileName,
+              originalFileName: video.originalFileName,
+              durationSeconds: video.durationSeconds,
+            }))}
             initialStatus={assignment.status}
             initial={{
               watchedSeconds: assignment.progress?.watchedSeconds ?? 0,
-              watchedPercent: watchedPercent(
-                assignment.progress?.watchedSeconds ?? 0,
-                course.video.durationSeconds,
-              ),
+              watchedPercent: watchedPercent(assignment.progress?.watchedSeconds ?? 0, durationSeconds),
               lastPositionSeconds: assignment.progress?.lastPositionSeconds ?? 0,
               videoCompleted: assignment.progress?.videoCompleted ?? false,
               watchedRanges: (assignment.progress?.watchedRanges ?? []).map(

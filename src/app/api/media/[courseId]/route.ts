@@ -1,6 +1,7 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
+import { courseVideos } from "@/lib/course-videos";
 import { fileRangeResponse, MediaError, resolveStoredFile } from "@/lib/media";
 import { AuthzError, getTenantContext } from "@/lib/rbac";
 import { objectIdSchema } from "@/lib/validators";
@@ -32,9 +33,16 @@ async function streamCourse(request: Request, courseId: string) {
     }
   }
 
+  const videos = courseVideos(course);
+  const requested = new URL(request.url).searchParams.get("video");
+  const chosen = requested ? videos.find((video) => video.storedFileName === requested) : videos[0];
+  if (!chosen) {
+    return Response.json({ error: "Not found" }, { status: 404 });
+  }
+
   let filePath: string;
   try {
-    filePath = resolveStoredFile(mediaDir, path.basename(course.video.storedFileName));
+    filePath = resolveStoredFile(mediaDir, path.basename(chosen.storedFileName));
     await stat(filePath);
   } catch (error) {
     if (error instanceof MediaError) {
@@ -44,12 +52,7 @@ async function streamCourse(request: Request, courseId: string) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
-  return fileRangeResponse(
-    request,
-    filePath,
-    course.video.mimeType,
-    course.video.originalFileName,
-  );
+  return fileRangeResponse(request, filePath, chosen.mimeType, chosen.originalFileName);
 }
 
 export async function GET(request: Request, context: { params: Promise<{ courseId: string }> }) {

@@ -7,7 +7,8 @@ import { pipeline } from "node:stream/promises";
 
 import Busboy from "busboy";
 
-import { courseDetailsSchema } from "@/lib/validators";
+import { MAX_COURSE_VIDEOS } from "@/lib/course-videos";
+import { courseTextSchema, videoDurationSchema } from "@/lib/validators";
 
 const STORED_FILE_NAME =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp4|webm)$/;
@@ -22,6 +23,14 @@ export class MediaError extends Error {
   }
 }
 
+export type StoredVideo = {
+  storedFileName: string;
+  originalFileName: string;
+  mimeType: "video/mp4" | "video/webm";
+  sizeBytes: number;
+  durationSeconds: number;
+};
+
 export type StoredUpload = {
   storedFileName: string;
   originalFileName: string;
@@ -31,6 +40,11 @@ export type StoredUpload = {
   title: string;
   description?: string;
   status?: string;
+  /** Stored names the edit form wants to retain, in order. */
+  keep: string[];
+  /** Playback order. `keep:<stored name>` or `new:<upload index>`. */
+  order: string[];
+  videos: StoredVideo[];
 };
 
 export type ByteRange =
@@ -124,12 +138,13 @@ export async function removeStoredVideo(storedFileName: string, root = mediaRoot
 }
 
 /**
- * Stream a multipart course upload onto disk. The file part is never accumulated in memory.
+ * Stream a multipart course upload onto disk. File parts are never accumulated in memory.
  * A maxBytes option is only for tests. Course uploads are not size-capped.
+ * requireFile defaults to true. An edit that only removes videos sets it false.
  */
 export async function writeVideoUpload(
   request: Request,
-  options: { maxBytes?: number; root?: string } = {},
+  options: { maxBytes?: number; root?: string; requireFile?: boolean } = {},
 ): Promise<StoredUpload> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("multipart/form-data") || !request.body) {
@@ -138,49 +153,81 @@ export async function writeVideoUpload(
 
   const root = path.resolve(options.root ?? mediaRoot());
   const maxBytes = options.maxBytes;
+  const requireFile = options.requireFile !== false;
   await mkdir(root, { recursive: true });
-  const tempPath = path.join(root, `.upload-${randomUUID()}.part`);
+  const temps: string[] = [];
+  const storedNames: string[] = [];
 
   try {
-    const parsed = await parseMultipart(request, contentType, tempPath, maxBytes);
-    if (maxBytes !== undefined && (parsed.truncated || parsed.sizeBytes > maxBytes)) {
-      throw new MediaError(413, `That video is larger than ${formatUploadLimit(maxBytes)}`);
+    const parsed = await parseMultipart(request, contentType, root, temps, maxBytes);
+    if (parsed.files.length > MAX_COURSE_VIDEOS) {
+      throw new MediaError(400, `A course can have up to ${MAX_COURSE_VIDEOS} videos`);
     }
-    if (parsed.sizeBytes < 12) {
+    if (requireFile && parsed.files.length === 0) {
       throw new MediaError(400, "Use an mp4 or webm video");
     }
-
-    const sniffed = sniffContainer(await readHeader(tempPath));
-    if (!sniffed || sniffed !== parsed.container) {
-      throw new MediaError(400, "Use an mp4 or webm video");
+    if (parsed.durations.length !== parsed.files.length) {
+      throw new MediaError(400, "Each video needs a length");
     }
 
     const description = parsed.fields.get("description");
-    const details = courseDetailsSchema.safeParse({
+    const details = courseTextSchema.safeParse({
       title: parsed.fields.get("title") ?? "",
       description: description && description.trim().length > 0 ? description : undefined,
-      durationSeconds: Number(parsed.fields.get("durationSeconds")),
     });
     if (!details.success) {
       throw new MediaError(400, details.error.issues[0]?.message ?? "Check the form");
     }
 
-    const storedFileName = `${randomUUID()}.${sniffed}`;
-    const finalPath = resolveStoredFile(root, storedFileName);
-    await rename(tempPath, finalPath);
+    const videos: StoredVideo[] = [];
+    for (let index = 0; index < parsed.files.length; index += 1) {
+      const file = parsed.files[index];
+      if (!file) continue;
+      if (maxBytes !== undefined && (file.truncated || file.sizeBytes > maxBytes)) {
+        throw new MediaError(413, `That video is larger than ${formatUploadLimit(maxBytes)}`);
+      }
+      if (file.sizeBytes < 12) {
+        throw new MediaError(400, "Use an mp4 or webm video");
+      }
+      const sniffed = sniffContainer(await readHeader(file.tempPath));
+      if (!sniffed || sniffed !== file.container) {
+        throw new MediaError(400, "Use an mp4 or webm video");
+      }
+      const duration = videoDurationSchema.safeParse(Number(parsed.durations[index]));
+      if (!duration.success) {
+        throw new MediaError(400, duration.error.issues[0]?.message ?? "Check the form");
+      }
+      const storedFileName = `${randomUUID()}.${sniffed}`;
+      await rename(file.tempPath, resolveStoredFile(root, storedFileName));
+      const tempIndex = temps.indexOf(file.tempPath);
+      if (tempIndex >= 0) temps.splice(tempIndex, 1);
+      storedNames.push(storedFileName);
+      videos.push({
+        storedFileName,
+        originalFileName: displayFileName(file.filename, sniffed),
+        mimeType: sniffed === "mp4" ? "video/mp4" : "video/webm",
+        sizeBytes: file.sizeBytes,
+        durationSeconds: duration.data,
+      });
+    }
 
+    const first = videos[0];
     return {
-      storedFileName,
-      originalFileName: displayFileName(parsed.filename, sniffed),
-      mimeType: sniffed === "mp4" ? "video/mp4" : "video/webm",
-      sizeBytes: parsed.sizeBytes,
-      durationSeconds: details.data.durationSeconds,
+      storedFileName: first?.storedFileName ?? "",
+      originalFileName: first?.originalFileName ?? "",
+      mimeType: first?.mimeType ?? "video/mp4",
+      sizeBytes: first?.sizeBytes ?? 0,
+      durationSeconds: first?.durationSeconds ?? 0,
       title: details.data.title,
       description: details.data.description,
       status: parsed.fields.get("status"),
+      keep: parsed.keep,
+      order: parsed.order,
+      videos,
     };
   } catch (error) {
-    await discard(tempPath);
+    await Promise.all(storedNames.map((name) => removeStoredVideo(name, root).catch(() => undefined)));
+    await Promise.all(temps.map((tempPath) => discard(tempPath).catch(() => undefined)));
     throw error;
   }
 }
@@ -236,18 +283,27 @@ export async function fileRangeResponse(
   return new Response(Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>, { status, headers });
 }
 
-type ParsedUpload = {
-  fields: Map<string, string>;
+type ParsedFile = {
+  tempPath: string;
   filename: string | undefined;
   container: Container;
   sizeBytes: number;
   truncated: boolean;
 };
 
+type ParsedUpload = {
+  fields: Map<string, string>;
+  durations: string[];
+  keep: string[];
+  order: string[];
+  files: ParsedFile[];
+};
+
 function parseMultipart(
   request: Request,
   contentType: string,
-  tempPath: string,
+  root: string,
+  temps: string[],
   maxBytes?: number,
 ): Promise<ParsedUpload> {
   return new Promise((resolve, reject) => {
@@ -257,11 +313,11 @@ function parseMultipart(
         headers: { "content-type": contentType },
         defParamCharset: "utf8",
         limits: {
-          files: 1,
+          files: MAX_COURSE_VIDEOS + 1,
           ...(maxBytes !== undefined ? { fileSize: maxBytes + 1 } : {}),
-          fields: 8,
+          fields: 48,
           fieldSize: 16 * 1024,
-          parts: 12,
+          parts: 80,
         },
       });
     } catch {
@@ -270,16 +326,15 @@ function parseMultipart(
     }
 
     const fields = new Map<string, string>();
+    const durations: string[] = [];
+    const keep: string[] = [];
+    const order: string[] = [];
+    const files: ParsedFile[] = [];
+    const fileTasks: Promise<void>[] = [];
     let settled = false;
-    let fileSeen = false;
     let badType = false;
     let extraFile = false;
     let fieldError = false;
-    let filename: string | undefined;
-    let container: Container | null = null;
-    let sizeBytes = 0;
-    let truncated = false;
-    let fileDone: Promise<void> = Promise.resolve();
 
     const source = Readable.fromWeb(request.body as import("node:stream/web").ReadableStream<Uint8Array>);
 
@@ -296,37 +351,58 @@ function parseMultipart(
         fieldError = true;
         return;
       }
-      if (name === "title" || name === "description" || name === "durationSeconds" || name === "status") {
+      if (name === "durationSeconds") {
+        durations.push(value);
+        return;
+      }
+      if (name === "keep") {
+        keep.push(value);
+        return;
+      }
+      if (name === "order") {
+        order.push(value);
+        return;
+      }
+      if (name === "title" || name === "description" || name === "status") {
         fields.set(name, value);
       }
     });
 
     busboy.on("file", (name, stream, info) => {
-      if (fileSeen || name !== "video") {
+      if (name !== "video" || files.length >= MAX_COURSE_VIDEOS) {
         extraFile = true;
         stream.resume();
         return;
       }
-      fileSeen = true;
       const declared = containerForMime(info.mimeType);
       if (!declared) {
         badType = true;
         stream.resume();
         return;
       }
-      container = declared;
-      filename = info.filename;
+      const tempPath = path.join(root, `.upload-${randomUUID()}.part`);
+      temps.push(tempPath);
+      const entry: ParsedFile = {
+        tempPath,
+        filename: info.filename,
+        container: declared,
+        sizeBytes: 0,
+        truncated: false,
+      };
+      files.push(entry);
       const counter = new PassThrough();
       counter.on("data", (chunk: Buffer) => {
-        sizeBytes += chunk.length;
+        entry.sizeBytes += chunk.length;
       });
-      fileDone = pipeline(stream, counter, createWriteStream(tempPath))
-        .then(() => {
-          truncated = Boolean(stream.truncated);
-        })
-        .catch((error: unknown) => {
-          fail(error);
-        });
+      fileTasks.push(
+        pipeline(stream, counter, createWriteStream(tempPath))
+          .then(() => {
+            entry.truncated = Boolean(stream.truncated);
+          })
+          .catch((error: unknown) => {
+            fail(error);
+          }),
+      );
     });
 
     busboy.on("filesLimit", () => {
@@ -343,15 +419,21 @@ function parseMultipart(
     request.signal.addEventListener("abort", () => fail(new MediaError(400, "Upload cancelled")), { once: true });
 
     busboy.on("close", () => {
-      void fileDone
+      void Promise.all(fileTasks)
         .then(() => {
           if (settled) return;
           if (extraFile) {
-            fail(new MediaError(400, "Send one video file"));
+            fail(
+              new MediaError(
+                400,
+                files.length >= MAX_COURSE_VIDEOS
+                  ? `A course can have up to ${MAX_COURSE_VIDEOS} videos`
+                  : "Use an mp4 or webm video",
+              ),
+            );
             return;
           }
-          const chosen = container;
-          if (!fileSeen || badType || !chosen) {
+          if (badType) {
             fail(new MediaError(400, "Use an mp4 or webm video"));
             return;
           }
@@ -360,7 +442,7 @@ function parseMultipart(
             return;
           }
           settled = true;
-          resolve({ fields, filename, container: chosen, sizeBytes, truncated });
+          resolve({ fields, durations, keep, order, files });
         })
         .catch((error: unknown) => fail(error));
     });

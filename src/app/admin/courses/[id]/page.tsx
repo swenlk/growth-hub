@@ -8,11 +8,13 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { matchesAssignmentFilter, readAssignmentFilter } from "@/lib/assignment-view";
 import { listAssignments } from "@/lib/assignments";
+import { courseDurationSeconds, courseSizeBytes, courseVideos } from "@/lib/course-videos";
 import { formatBytes, formatDuration } from "@/lib/format";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 import { objectIdSchema } from "@/lib/validators";
 
 import { setCourseStatusAction } from "../actions";
+import { CourseVideoPreview } from "../preview";
 import { CourseStatusForm } from "../status-form";
 
 export const metadata: Metadata = {
@@ -39,6 +41,7 @@ export default async function CourseDetailPage({
   const rows = (await listAssignments(models, { courseId: id })).filter((row) =>
     matchesAssignmentFilter(row, filter),
   );
+  const videos = courseVideos(course);
 
   return (
     <>
@@ -49,9 +52,9 @@ export default async function CourseDetailPage({
             <h6 className="text-lg font-semibold">{course.title}</h6>
             <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-neutral-600 dark:text-neutral-300">
               <StatusBadge status={course.status} label={course.status === "archived" ? "Inactive" : undefined} />
-              <span>{formatDuration(course.video.durationSeconds)}</span>
-              <span>{formatBytes(course.video.sizeBytes)}</span>
-              <span>{course.video.originalFileName}</span>
+              <span>{formatDuration(courseDurationSeconds(course))}</span>
+              <span>{formatBytes(courseSizeBytes(course))}</span>
+              <span>{videos.length === 1 ? videos[0]?.originalFileName : `${videos.length} videos`}</span>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -72,13 +75,14 @@ export default async function CourseDetailPage({
         <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-300">
           This preview does not record watch progress. Staff progress is tracked on each assignment.
         </p>
-        <video
-          controls
-          controlsList="nodownload"
-          preload="metadata"
-          playsInline
-          className="max-h-[480px] w-full rounded-md bg-black"
-          src={`/api/media/${course._id.toString()}`}
+        <CourseVideoPreview
+          courseId={course._id.toString()}
+          videos={videos.map((video) => ({
+            storedFileName: video.storedFileName,
+            originalFileName: video.originalFileName,
+            durationSeconds: video.durationSeconds,
+            sizeBytes: video.sizeBytes,
+          }))}
         />
       </div>
       <div className="card mt-4">

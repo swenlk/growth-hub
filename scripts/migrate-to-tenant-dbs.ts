@@ -38,6 +38,7 @@ type OldDoc = {
   keycloakUserId?: unknown;
   assignments?: unknown;
   video?: { storedFileName?: unknown };
+  videos?: { storedFileName?: unknown }[];
 };
 
 type PlannedTenant = {
@@ -50,6 +51,17 @@ type PlannedTenant = {
   courses: OldDoc[];
   staff: OldDoc[];
 };
+
+function storedFileNames(course: OldDoc): string[] {
+  const many = Array.isArray(course.videos) ? course.videos : [];
+  const fromList = many.flatMap((item) => {
+    const stored = item?.storedFileName;
+    return typeof stored === "string" && stored.length > 0 ? [stored] : [];
+  });
+  if (fromList.length > 0) return fromList;
+  const single = course.video?.storedFileName;
+  return typeof single === "string" && single.length > 0 ? [single] : [];
+}
 
 function loadEnvFiles() {
   for (const filename of [".env", ".env.local"]) {
@@ -254,22 +266,23 @@ async function main() {
   let failed = false;
 
   for (const tenant of planned) {
+    const mediaDir = tenantMediaDir(tenant.slug);
+    const videoPaths = tenant.courses.flatMap((course) => {
+      const names = storedFileNames(course);
+      const chosen = names.length > 0 ? names : [""];
+      return chosen.map((stored) => {
+        if (stored.length === 0) return { stored: "", source: "", dest: "", ready: false };
+        const sourcePath = resolveStoredFile(root, path.basename(stored));
+        const destPath = resolveStoredFile(mediaDir, path.basename(stored));
+        return { stored, source: sourcePath, dest: destPath, ready: true };
+      });
+    });
     const before: MigrationCounts = {
       courses: tenant.courses.length,
       staff: tenant.staff.length,
       assignments: countAssignments(tenant.staff),
-      files: tenant.courses.length,
+      files: videoPaths.length,
     };
-    const mediaDir = tenantMediaDir(tenant.slug);
-    const videoPaths = tenant.courses.map((course) => {
-      const stored = course.video?.storedFileName;
-      if (typeof stored !== "string" || stored.length === 0) {
-        return { stored: "", source: "", dest: "", ready: false };
-      }
-      const sourcePath = resolveStoredFile(root, path.basename(stored));
-      const destPath = resolveStoredFile(mediaDir, path.basename(stored));
-      return { stored, source: sourcePath, dest: destPath, ready: true };
-    });
 
     let filesReady = 0;
     for (const video of videoPaths) {

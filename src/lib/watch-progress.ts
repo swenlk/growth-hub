@@ -3,6 +3,7 @@ import "server-only";
 import { ZodError } from "zod";
 
 import { emptyProgress, watchedPercent } from "@/lib/assignment-view";
+import { courseDurationSeconds } from "@/lib/course-videos";
 import type { AssignmentStatus } from "@/lib/domain";
 import {
   applyHeartbeat,
@@ -43,10 +44,15 @@ export type WatchView = {
 
 function viewOf(
   assignment: Assignment,
-  course: { _id: { toString(): string }; title: string; video: { durationSeconds: number } },
+  course: {
+    _id: { toString(): string };
+    title: string;
+    video?: { durationSeconds?: number } | null;
+    videos?: { durationSeconds?: number }[] | null;
+  },
 ): WatchView {
   const watchedSeconds = assignment.progress?.watchedSeconds ?? 0;
-  const durationSeconds = course.video.durationSeconds;
+  const durationSeconds = courseDurationSeconds(course);
   return {
     assignmentId: assignment.assignmentId,
     courseId: course._id.toString(),
@@ -99,7 +105,7 @@ export async function recordHeartbeat(
     assignment.progress ?? emptyProgress(),
     assignment.status,
     heartbeat,
-    course.video.durationSeconds,
+    courseDurationSeconds(course),
     now,
   );
 

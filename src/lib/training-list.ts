@@ -1,6 +1,7 @@
 import "server-only";
 
 import { formatDay, isOverdue, watchedPercent } from "@/lib/assignment-view";
+import { courseDurationSeconds } from "@/lib/course-videos";
 import type { AssignmentStatus } from "@/lib/domain";
 import { AuthzError, getTenantContext, type TenantContext } from "@/lib/rbac";
 
@@ -46,14 +47,16 @@ export async function listOwnTraining(ctx: TenantContext, status: AssignmentStat
   if (assignments.length === 0) return [];
 
   const courseIds = [...new Set(assignments.map((item) => String(item.courseId)))];
-  const courses = await ctx.models.Course.find({ _id: { $in: courseIds } }).select("title video.durationSeconds").lean();
+  const courses = await ctx.models.Course.find({ _id: { $in: courseIds } })
+    .select("title video.durationSeconds videos.durationSeconds")
+    .lean();
   const courseById = new Map(courses.map((course) => [String(course._id), course]));
 
   return assignments
     .toSorted((left, right) => new Date(right.assignedAt).getTime() - new Date(left.assignedAt).getTime())
     .map((assignment) => {
       const course = courseById.get(String(assignment.courseId));
-      const duration = course?.video.durationSeconds ?? 0;
+      const duration = course ? courseDurationSeconds(course) : 0;
       const watched = assignment.progress?.watchedSeconds ?? 0;
       return {
         assignmentId: assignment.assignmentId,

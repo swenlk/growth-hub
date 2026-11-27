@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { dueDateFromInput, emptyProgress } from "@/lib/assignment-view";
+import { courseDurationSeconds } from "@/lib/course-videos";
 import type { AssignmentStatus } from "@/lib/domain";
 import type { TenantContext } from "@/lib/rbac";
 import { createAssignmentSchema, type CreateAssignmentInput } from "@/lib/validators";
@@ -163,7 +164,7 @@ export async function listAssignments(
   }
 
   const courses = await models.Course.find({ _id: { $in: [...courseIds] } })
-    .select("title video.durationSeconds")
+    .select("title video.durationSeconds videos.durationSeconds")
     .lean();
   const titles = new Map(courses.map((course) => [String(course._id), course]));
 
@@ -177,7 +178,7 @@ export async function listAssignments(
         assignmentId: assignment.assignmentId,
         courseId,
         courseTitle: course?.title ?? "Course removed",
-        durationSeconds: course?.video.durationSeconds ?? 0,
+        durationSeconds: course ? courseDurationSeconds(course) : 0,
         staffId: String(person._id),
         staffName: person.name,
         assignedAt: assignment.assignedAt,

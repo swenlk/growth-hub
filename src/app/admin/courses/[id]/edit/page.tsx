@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { courseVideos } from "@/lib/course-videos";
 import type { CourseStatus } from "@/lib/domain";
 import { readChoice, readPage, readText, withListQuery } from "@/lib/list-search";
 import { getTenantContext, requireRole } from "@/lib/rbac";
@@ -31,7 +32,7 @@ export default async function EditCoursePage({
 
   await requireRole("tenant_admin");
   const { models } = await getTenantContext();
-  const course = await models.Course.findById(id).select("title description status video.originalFileName").lean();
+  const course = await models.Course.findById(id).select("title description status video videos").lean();
   if (!course) notFound();
 
   return (
@@ -39,7 +40,7 @@ export default async function EditCoursePage({
       <DashboardBreadcrumb
         title="Edit course"
         text="Library"
-        hint="Replace the video only when this course should play a different file."
+        hint="Add videos, or remove ones that should no longer play."
         backHref={withListQuery("/admin/courses", {
           q: readText(query.q),
           status: readChoice(query.status, COURSE_STATUSES),
@@ -52,7 +53,12 @@ export default async function EditCoursePage({
           title={course.title}
           description={course.description ?? ""}
           status={course.status}
-          fileName={course.video.originalFileName}
+          videos={courseVideos(course).map((video) => ({
+            storedFileName: video.storedFileName,
+            originalFileName: video.originalFileName,
+            durationSeconds: video.durationSeconds,
+            sizeBytes: video.sizeBytes,
+          }))}
           action={updateCourseAction}
         />
       </div>
