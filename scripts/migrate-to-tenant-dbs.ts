@@ -39,6 +39,7 @@ type OldDoc = {
   assignments?: unknown;
   video?: { storedFileName?: unknown };
   videos?: { storedFileName?: unknown }[];
+  documents?: { storedFileName?: unknown }[];
 };
 
 type PlannedTenant = {
@@ -52,15 +53,23 @@ type PlannedTenant = {
   staff: OldDoc[];
 };
 
-function storedFileNames(course: OldDoc): string[] {
-  const many = Array.isArray(course.videos) ? course.videos : [];
-  const fromList = many.flatMap((item) => {
+function storedNames(items: { storedFileName?: unknown }[] | undefined): string[] {
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((item) => {
     const stored = item?.storedFileName;
     return typeof stored === "string" && stored.length > 0 ? [stored] : [];
   });
-  if (fromList.length > 0) return fromList;
-  const single = course.video?.storedFileName;
-  return typeof single === "string" && single.length > 0 ? [single] : [];
+}
+
+function storedFileNames(course: OldDoc): string[] {
+  const fromList = storedNames(course.videos);
+  const videos =
+    fromList.length > 0
+      ? fromList
+      : typeof course.video?.storedFileName === "string" && course.video.storedFileName.length > 0
+        ? [course.video.storedFileName]
+        : [];
+  return [...videos, ...storedNames(course.documents)];
 }
 
 function loadEnvFiles() {

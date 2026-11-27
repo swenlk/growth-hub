@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
-import { courseVideos } from "@/lib/course-videos";
+import { courseDocuments, courseVideos } from "@/lib/course-videos";
 import { fileRangeResponse, MediaError, resolveStoredFile } from "@/lib/media";
 import { AuthzError, getTenantContext } from "@/lib/rbac";
 import { objectIdSchema } from "@/lib/validators";
@@ -31,6 +31,26 @@ async function streamCourse(request: Request, courseId: string) {
     if (!assigned) {
       return Response.json({ error: "You are not assigned this course" }, { status: 403 });
     }
+  }
+
+  const pdfName = new URL(request.url).searchParams.get("pdf");
+  if (pdfName !== null) {
+    const chosen = courseDocuments(course).find((pdf) => pdf.storedFileName === pdfName);
+    if (!chosen) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+    let pdfPath: string;
+    try {
+      pdfPath = resolveStoredFile(mediaDir, path.basename(chosen.storedFileName));
+      await stat(pdfPath);
+    } catch (error) {
+      if (error instanceof MediaError) {
+        return Response.json({ error: "Not found" }, { status: 404 });
+      }
+      console.error("Course PDF missing", courseId);
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+    return fileRangeResponse(request, pdfPath, "application/pdf", chosen.originalFileName);
   }
 
   const videos = courseVideos(course);

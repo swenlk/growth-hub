@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { courseVideos } from "@/lib/course-videos";
+import { courseDocuments, courseVideos } from "@/lib/course-videos";
 import type { CourseStatus } from "@/lib/domain";
 import { readChoice, readPage, readText, withListQuery } from "@/lib/list-search";
 import { getTenantContext, requireRole } from "@/lib/rbac";
@@ -32,7 +32,7 @@ export default async function EditCoursePage({
 
   await requireRole("tenant_admin");
   const { models } = await getTenantContext();
-  const course = await models.Course.findById(id).select("title description status video videos").lean();
+  const course = await models.Course.findById(id).select("title description status video videos documents").lean();
   if (!course) notFound();
 
   return (
@@ -40,7 +40,7 @@ export default async function EditCoursePage({
       <DashboardBreadcrumb
         title="Edit course"
         text="Courses"
-        hint="Add videos, or remove ones that should no longer play."
+        hint="Add videos or PDFs, or remove ones that should no longer be available."
         backHref={withListQuery("/admin/courses", {
           q: readText(query.q),
           status: readChoice(query.status, COURSE_STATUSES),
@@ -58,6 +58,11 @@ export default async function EditCoursePage({
             originalFileName: video.originalFileName,
             durationSeconds: video.durationSeconds,
             sizeBytes: video.sizeBytes,
+          }))}
+          documents={courseDocuments(course).map((pdf) => ({
+            storedFileName: pdf.storedFileName,
+            originalFileName: pdf.originalFileName,
+            sizeBytes: pdf.sizeBytes,
           }))}
           action={updateCourseAction}
         />

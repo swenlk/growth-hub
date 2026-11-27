@@ -10,7 +10,7 @@ import Busboy from "busboy";
 import { courseTextSchema, videoDurationSchema } from "@/lib/validators";
 
 const STORED_FILE_NAME =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp4|webm)$/;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(mp4|webm|pdf)$/;
 
 export class MediaError extends Error {
   readonly status: 400 | 413 | 404 | 500;
@@ -30,6 +30,13 @@ export type StoredVideo = {
   durationSeconds: number;
 };
 
+export type StoredPdf = {
+  storedFileName: string;
+  originalFileName: string;
+  mimeType: "application/pdf";
+  sizeBytes: number;
+};
+
 export type StoredUpload = {
   storedFileName: string;
   originalFileName: string;
@@ -44,6 +51,11 @@ export type StoredUpload = {
   /** Playback order. `keep:<stored name>` or `new:<upload index>`. */
   order: string[];
   videos: StoredVideo[];
+  /** Stored PDF names the edit form wants to retain, in order. */
+  keepPdf: string[];
+  /** PDF order. `keep:<stored name>` or `new:<upload index>`. */
+  pdfOrder: string[];
+  pdfs: StoredPdf[];
 };
 
 export type ByteRange =
@@ -51,7 +63,7 @@ export type ByteRange =
   | { kind: "partial"; start: number; end: number }
   | { kind: "unsatisfiable" };
 
-type Container = "mp4" | "webm";
+type Container = "mp4" | "webm" | "pdf";
 
 export function mediaRoot(): string {
   const configured = process.env.MEDIA_DIR?.trim();
@@ -74,6 +86,10 @@ export function resolveStoredFile(root: string, storedFileName: string): string 
     throw new MediaError(400, "Invalid file name");
   }
   return full;
+}
+
+export function sniffPdf(header: Buffer): boolean {
+  return header.length >= 5 && header.subarray(0, 5).toString("ascii") === "%PDF-";
 }
 
 export function sniffContainer(header: Buffer): Container | null {
@@ -162,7 +178,9 @@ export async function writeVideoUpload(
     if (requireFile && parsed.files.length === 0) {
       throw new MediaError(400, "Use an mp4 or webm video");
     }
-    if (parsed.durations.length !== parsed.files.length) {
+    const videoFiles = parsed.files.filter((file) => file.container !== "pdf");
+    const pdfFiles = parsed.files.filter((file) => file.container === "pdf");
+    if (parsed.durations.length !== videoFiles.length) {
       throw new MediaError(400, "Each video needs a length");
     }
 
@@ -176,9 +194,9 @@ export async function writeVideoUpload(
     }
 
     const videos: StoredVideo[] = [];
-    for (let index = 0; index < parsed.files.length; index += 1) {
-      const file = parsed.files[index];
-      if (!file) continue;
+    for (let index = 0; index < videoFiles.length; index += 1) {
+      const file = videoFiles[index];
+      if (!file || file.container === "pdf") continue;
       if (maxBytes !== undefined && (file.truncated || file.sizeBytes > maxBytes)) {
         throw new MediaError(413, `That video is larger than ${formatUploadLimit(maxBytes)}`);
       }
@@ -207,6 +225,27 @@ export async function writeVideoUpload(
       });
     }
 
+    const pdfs: StoredPdf[] = [];
+    for (const file of pdfFiles) {
+      if (maxBytes !== undefined && (file.truncated || file.sizeBytes > maxBytes)) {
+        throw new MediaError(413, `That PDF is larger than ${formatUploadLimit(maxBytes)}`);
+      }
+      if (file.sizeBytes < 5 || !sniffPdf(await readHeader(file.tempPath))) {
+        throw new MediaError(400, "Use a PDF file");
+      }
+      const storedFileName = `${randomUUID()}.pdf`;
+      await rename(file.tempPath, resolveStoredFile(root, storedFileName));
+      const tempIndex = temps.indexOf(file.tempPath);
+      if (tempIndex >= 0) temps.splice(tempIndex, 1);
+      storedNames.push(storedFileName);
+      pdfs.push({
+        storedFileName,
+        originalFileName: displayFileName(file.filename, "pdf"),
+        mimeType: "application/pdf",
+        sizeBytes: file.sizeBytes,
+      });
+    }
+
     const first = videos[0];
     return {
       storedFileName: first?.storedFileName ?? "",
@@ -220,6 +259,9 @@ export async function writeVideoUpload(
       keep: parsed.keep,
       order: parsed.order,
       videos,
+      keepPdf: parsed.keepPdf,
+      pdfOrder: parsed.pdfOrder,
+      pdfs,
     };
   } catch (error) {
     await Promise.all(storedNames.map((name) => removeStoredVideo(name, root).catch(() => undefined)));
@@ -249,7 +291,7 @@ export async function fileRangeResponse(
   const range = parseByteRange(request.headers.get("range"), size);
   const headers = new Headers();
   headers.set("Accept-Ranges", "bytes");
-  headers.set("Content-Type", mimeType === "video/webm" ? "video/webm" : "video/mp4");
+  headers.set("Content-Type", mimeType === "application/pdf" ? "application/pdf" : mimeType === "video/webm" ? "video/webm" : "video/mp4");
   headers.set("Cache-Control", "private, no-store");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Content-Disposition", contentDisposition(downloadName));
@@ -292,6 +334,8 @@ type ParsedUpload = {
   durations: string[];
   keep: string[];
   order: string[];
+  keepPdf: string[];
+  pdfOrder: string[];
   files: ParsedFile[];
 };
 
@@ -322,10 +366,13 @@ function parseMultipart(
     const durations: string[] = [];
     const keep: string[] = [];
     const order: string[] = [];
+    const keepPdf: string[] = [];
+    const pdfOrder: string[] = [];
     const files: ParsedFile[] = [];
     const fileTasks: Promise<void>[] = [];
     let settled = false;
     let badType = false;
+    let badPdf = false;
     let extraFile = false;
     let fieldError = false;
 
@@ -356,20 +403,29 @@ function parseMultipart(
         order.push(value);
         return;
       }
+      if (name === "keepPdf") {
+        keepPdf.push(value);
+        return;
+      }
+      if (name === "pdfOrder") {
+        pdfOrder.push(value);
+        return;
+      }
       if (name === "title" || name === "description" || name === "status") {
         fields.set(name, value);
       }
     });
 
     busboy.on("file", (name, stream, info) => {
-      if (name !== "video") {
+      const declared = name === "video" ? containerForMime(info.mimeType) : name === "pdf" ? declaredPdf(info) : null;
+      if (name !== "video" && name !== "pdf") {
         extraFile = true;
         stream.resume();
         return;
       }
-      const declared = containerForMime(info.mimeType);
       if (!declared) {
-        badType = true;
+        if (name === "pdf") badPdf = true;
+        else badType = true;
         stream.resume();
         return;
       }
@@ -419,6 +475,10 @@ function parseMultipart(
             fail(new MediaError(400, "Use an mp4 or webm video"));
             return;
           }
+          if (badPdf) {
+            fail(new MediaError(400, "Use a PDF file"));
+            return;
+          }
           if (badType) {
             fail(new MediaError(400, "Use an mp4 or webm video"));
             return;
@@ -428,7 +488,7 @@ function parseMultipart(
             return;
           }
           settled = true;
-          resolve({ fields, durations, keep, order, files });
+          resolve({ fields, durations, keep, order, keepPdf, pdfOrder, files });
         })
         .catch((error: unknown) => fail(error));
     });
@@ -455,10 +515,17 @@ function formatUploadLimit(maxBytes: number): string {
   return `${maxBytes} bytes`;
 }
 
+function declaredPdf(info: { mimeType: string; filename?: string }): "pdf" | null {
+  const base = info.mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
+  const filename = (info.filename ?? "").toLowerCase();
+  if (base === "application/pdf" || filename.endsWith(".pdf")) return "pdf";
+  return null;
+}
+
 function displayFileName(filename: string | undefined, container: Container): string {
   const leaf = (filename ?? "").split(/[/\\]/).pop() ?? "";
   const cleaned = leaf.replace(/[\u0000-\u001f\u007f"]/g, "").trim().slice(0, 180);
-  if (!cleaned || cleaned === "." || cleaned === "..") return `video.${container}`;
+  if (!cleaned || cleaned === "." || cleaned === "..") return container === "pdf" ? "document.pdf" : `video.${container}`;
   return cleaned;
 }
 

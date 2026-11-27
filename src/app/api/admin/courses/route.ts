@@ -14,7 +14,10 @@ export async function POST(request: Request) {
     const ctx = await getTenantContext();
     mediaDir = ctx.mediaDir;
     const uploaded = await writeVideoUpload(request, { root: ctx.mediaDir });
-    storedNames = uploaded.videos.map((video) => video.storedFileName);
+    storedNames = [
+      ...uploaded.videos.map((video) => video.storedFileName),
+      ...uploaded.pdfs.map((pdf) => pdf.storedFileName),
+    ];
     const first = uploaded.videos[0];
     if (!first) {
       throw new MediaError(400, "Add at least one video");
@@ -26,6 +29,7 @@ export async function POST(request: Request) {
       status: "active",
       video: first,
       videos: uploaded.videos,
+      documents: uploaded.pdfs,
     });
 
     storedNames = [];

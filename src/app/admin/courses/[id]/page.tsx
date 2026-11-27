@@ -8,7 +8,8 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { matchesAssignmentFilter, readAssignmentFilter } from "@/lib/assignment-view";
 import { listAssignments } from "@/lib/assignments";
-import { courseDurationSeconds, courseSizeBytes, courseVideos } from "@/lib/course-videos";
+import { CourseDocuments } from "@/components/CourseDocuments";
+import { courseDocuments, courseDurationSeconds, courseSizeBytes, courseVideos } from "@/lib/course-videos";
 import { formatBytes, formatDuration } from "@/lib/format";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 import { objectIdSchema } from "@/lib/validators";
@@ -82,6 +83,14 @@ export default async function CourseDetailPage({
             originalFileName: video.originalFileName,
             durationSeconds: video.durationSeconds,
             sizeBytes: video.sizeBytes,
+          }))}
+        />
+        <CourseDocuments
+          courseId={course._id.toString()}
+          documents={courseDocuments(course).map((pdf) => ({
+            storedFileName: pdf.storedFileName,
+            originalFileName: pdf.originalFileName,
+            sizeBytes: pdf.sizeBytes,
           }))}
         />
       </div>

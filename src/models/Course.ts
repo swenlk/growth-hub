@@ -12,6 +12,13 @@ export interface CourseVideo {
   durationSeconds: number;
 }
 
+export interface CourseDocument {
+  storedFileName: string;
+  originalFileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 export interface Course {
   _id: Types.ObjectId;
   title: string;
@@ -19,10 +26,22 @@ export interface Course {
   /** First video. Kept so older documents and readers still resolve one file. */
   video: CourseVideo;
   videos?: CourseVideo[];
+  /** Optional PDFs. Opening one does not affect watch progress. */
+  documents?: CourseDocument[];
   status: CourseStatus;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const courseDocumentSchema = new Schema<CourseDocument>(
+  {
+    storedFileName: { type: String, required: true },
+    originalFileName: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    sizeBytes: { type: Number, required: true, min: 0 },
+  },
+  { _id: false },
+);
 
 const courseVideoSchema = new Schema<CourseVideo>(
   {
@@ -41,6 +60,7 @@ export const courseSchema = new Schema<Course>(
     description: { type: String, trim: true },
     video: { type: courseVideoSchema, required: true },
     videos: { type: [courseVideoSchema], required: false },
+    documents: { type: [courseDocumentSchema], required: false },
     status: { type: String, enum: COURSE_STATUSES, required: true, default: "active" },
   },
   { timestamps: true },

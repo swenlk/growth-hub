@@ -16,7 +16,7 @@ export default async function NewCoursePage() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Add course" text="Courses" hint="Upload one or more videos. Each length is read before it is saved." backHref="/admin/courses" />
+      <DashboardBreadcrumb title="Add course" text="Courses" hint="Upload one or more videos. PDFs are optional." backHref="/admin/courses" />
       <div className="card !h-auto">
         <CourseCreateForm />
       </div>

@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+import { PdfField, type PdfStrip } from "./pdf-field";
 import { VideoField, type VideoStrip } from "./video-field";
 
 const fieldClass =
@@ -16,6 +17,7 @@ export function CourseCreateForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [strips, setStrips] = useState<VideoStrip[]>([]);
+  const [pdfs, setPdfs] = useState<PdfStrip[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
@@ -41,6 +43,9 @@ export function CourseCreateForm() {
     for (const item of pending) {
       body.append("durationSeconds", String(item.duration));
       body.append("video", item.file);
+    }
+    for (const strip of pdfs) {
+      if (strip.kind === "pending") body.append("pdf", strip.pdf.file);
     }
 
     setError(null);
@@ -86,7 +91,10 @@ export function CourseCreateForm() {
             />
           </label>
         </div>
-        <VideoField strips={strips} setStrips={setStrips} disabled={uploading} onPickError={setError} />
+        <div className="grid content-start gap-6">
+          <VideoField strips={strips} setStrips={setStrips} disabled={uploading} onPickError={setError} />
+          <PdfField strips={pdfs} setStrips={setPdfs} disabled={uploading} onPickError={setError} />
+        </div>
       </div>
       {uploading ? (
         <div className="space-y-1">

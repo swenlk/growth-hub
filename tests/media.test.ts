@@ -31,10 +31,17 @@ function webm(bytes = 64): Buffer {
   return buffer;
 }
 
+function pdfBytes(bytes = 32): Buffer {
+  const buffer = Buffer.alloc(bytes);
+  buffer.write("%PDF-1.4", 0, "ascii");
+  return buffer;
+}
+
 function multipart(
   fields: Record<string, string>,
   file: { name: string; type: string; data: Buffer },
   extraFile?: { name: string; type: string; data: Buffer; durationSeconds?: string },
+  pdfFile?: { name: string; data: Buffer },
 ) {
   const boundary = "----mediatest";
   const chunks: Buffer[] = [];
@@ -63,6 +70,15 @@ function multipart(
   };
   pushFile(file);
   if (extraFile) pushFile(extraFile);
+  if (pdfFile) {
+    chunks.push(
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="pdf"; filename="${pdfFile.name}"\r\nContent-Type: application/pdf\r\n\r\n`,
+      ),
+    );
+    chunks.push(pdfFile.data);
+    chunks.push(Buffer.from("\r\n"));
+  }
   chunks.push(Buffer.from(`--${boundary}--\r\n`));
   return new Request("http://localhost/api/admin/courses", {
     method: "POST",
@@ -229,6 +245,36 @@ async function main() {
     assert.equal(multi.videos[1]?.durationSeconds, 4);
     assert.ok(multi.videos[1]?.storedFileName.endsWith(".webm"));
     assert.deepEqual(multi.keep, []);
+    assert.deepEqual(multi.pdfs, []);
+
+    const withPdf = await writeVideoUpload(
+      multipart(
+        { title: "With notes", durationSeconds: "8" },
+        { name: "lesson.mp4", type: "video/mp4", data: mp4(32) },
+        undefined,
+        { name: "notes.pdf", data: pdfBytes() },
+      ),
+      { root, maxBytes: 1024 },
+    );
+    assert.equal(withPdf.videos.length, 1);
+    assert.equal(withPdf.pdfs.length, 1);
+    assert.ok(withPdf.pdfs[0]?.storedFileName.endsWith(".pdf"));
+    assert.equal(withPdf.pdfs[0]?.originalFileName, "notes.pdf");
+    assert.equal(withPdf.pdfs[0]?.mimeType, "application/pdf");
+
+    await assert.rejects(
+      () =>
+        writeVideoUpload(
+          multipart(
+            { title: "Bad pdf", durationSeconds: "3" },
+            { name: "a.mp4", type: "video/mp4", data: mp4(32) },
+            undefined,
+            { name: "notes.pdf", data: Buffer.from("this is not a pdf document!!") },
+          ),
+          { root, maxBytes: 1024 },
+        ),
+      (error: unknown) => error instanceof MediaError && error.status === 400,
+    );
 
     const keptOnly = await writeVideoUpload(fieldsOnly({ title: "Kept", description: "Still here" }, [`${id}.mp4`]), {
       root,

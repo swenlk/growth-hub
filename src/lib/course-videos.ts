@@ -9,6 +9,12 @@ export type CourseVideoFile = {
 type VideoDuration = { durationSeconds?: number };
 type VideoSize = { sizeBytes?: number };
 
+export function courseDocuments<T extends { storedFileName?: string }>(course: {
+  documents?: T[] | null;
+}): T[] {
+  return Array.isArray(course.documents) ? course.documents : [];
+}
+
 export function courseVideos<T extends { storedFileName?: string }>(course: {
   video?: T | null;
   videos?: T[] | null;

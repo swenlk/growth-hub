@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { CourseDocuments } from "@/components/CourseDocuments";
 import { TrackedVideoPlayer } from "@/components/TrackedVideoPlayer";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { assignmentStatusLabel, formatDay, isOverdue, watchedPercent } from "@/lib/assignment-view";
-import { courseDurationSeconds, courseVideos } from "@/lib/course-videos";
+import { courseDocuments, courseDurationSeconds, courseVideos } from "@/lib/course-videos";
 import { getTenantContext, requireRole } from "@/lib/rbac";
 import { z } from "zod";
 
@@ -70,6 +71,14 @@ export default async function AssignmentPlayerPage({
                 (range) => [Number(range[0]), Number(range[1])] as [number, number],
               ),
             }}
+          />
+          <CourseDocuments
+            courseId={course._id.toString()}
+            documents={courseDocuments(course).map((pdf) => ({
+              storedFileName: pdf.storedFileName,
+              originalFileName: pdf.originalFileName,
+              sizeBytes: pdf.sizeBytes,
+            }))}
           />
         </div>
       </div>
