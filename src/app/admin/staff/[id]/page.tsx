@@ -32,7 +32,7 @@ export default async function StaffDetailPage({
 
   return (
     <>
-      <DashboardBreadcrumb title={person.name} text="Staff member" backHref="/admin/staff" />
+      <DashboardBreadcrumb title={person.name} text="Staff" backHref="/admin/staff" />
       <div className="card mb-4 !h-auto">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

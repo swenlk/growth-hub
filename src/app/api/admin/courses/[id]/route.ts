@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 
-import { courseVideos, MAX_COURSE_VIDEOS, type CourseVideoFile } from "@/lib/course-videos";
+import { courseVideos, type CourseVideoFile } from "@/lib/course-videos";
 import { MediaError, removeStoredVideo, writeVideoUpload } from "@/lib/media";
 import { AuthzError, getTenantContext, requireRole } from "@/lib/rbac";
 import { courseStatusSchema, objectIdSchema } from "@/lib/validators";
@@ -89,9 +89,6 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const next = orderedVideos(kept, uploaded.videos, uploaded.order);
     if (next.length === 0) {
       throw new MediaError(400, "Add at least one video");
-    }
-    if (next.length > MAX_COURSE_VIDEOS) {
-      throw new MediaError(400, `A course can have up to ${MAX_COURSE_VIDEOS} videos`);
     }
 
     const nextNames = new Set(next.map((video) => video.storedFileName));

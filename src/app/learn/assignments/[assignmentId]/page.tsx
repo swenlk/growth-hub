@@ -35,7 +35,7 @@ export default async function AssignmentPlayerPage({
 
   return (
     <>
-      <DashboardBreadcrumb title={course.title} text="Watch" backHref="/learn" />
+      <DashboardBreadcrumb title={course.title} text="My training" nav="staff" backHref="/learn" />
       <div className="card">
         <h6 className="text-lg font-semibold">{course.title}</h6>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-neutral-500 dark:text-neutral-300">

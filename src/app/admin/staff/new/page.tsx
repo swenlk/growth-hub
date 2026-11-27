@@ -17,7 +17,7 @@ export default async function NewStaffPage() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Add staff" text="Directory" hint="They receive an email address and a temporary password." backHref="/admin/staff" />
+      <DashboardBreadcrumb title="Add staff" text="Staff" hint="They receive an email address and a temporary password." backHref="/admin/staff" />
       <div className="card !h-auto">
         <StaffCreateForm action={createStaffAction} />
       </div>

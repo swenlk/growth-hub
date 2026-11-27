@@ -74,7 +74,8 @@ export default async function TenantAdminsPage({
     <>
       <DashboardBreadcrumb
         title="Tenant admins"
-        text="Organizations"
+        text="Tenant admins"
+        nav="super_admin"
         hint="Choose an organization, then search to see its admins."
       />
       <div className="card flex flex-1 flex-col !h-auto">

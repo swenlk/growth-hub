@@ -60,7 +60,7 @@ export default async function CoursesPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Courses" text="Library" hint="A course can include more than one video. Open it to see who is assigned." />
+      <DashboardBreadcrumb title="Courses" text="Courses" hint="A course can include more than one video. Open it to see who is assigned." />
       <div className="card flex flex-1 flex-col !h-auto">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <form method="get" className="flex flex-wrap items-center gap-3">

@@ -64,7 +64,7 @@ export default async function TenantsPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Tenants" text="Organizations" hint="Search by name or tenant, then open an organization to update it." />
+      <DashboardBreadcrumb title="Tenants" text="Tenants" nav="super_admin" hint="Search by name or tenant, then open an organization to update it." />
       <div className="card flex flex-1 flex-col !h-auto">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <form method="get" className="flex flex-wrap items-center gap-3">

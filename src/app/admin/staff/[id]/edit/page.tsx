@@ -38,7 +38,7 @@ export default async function EditStaffPage({
     <>
       <DashboardBreadcrumb
         title="Edit staff"
-        text="Directory"
+        text="Staff"
         hint="Email stays the sign-in name. Leave the password blank to keep the current one."
         backHref={withListQuery("/admin/staff", {
           q: readText(query.q),

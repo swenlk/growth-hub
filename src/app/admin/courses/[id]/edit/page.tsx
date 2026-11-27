@@ -39,7 +39,7 @@ export default async function EditCoursePage({
     <>
       <DashboardBreadcrumb
         title="Edit course"
-        text="Library"
+        text="Courses"
         hint="Add videos, or remove ones that should no longer play."
         backHref={withListQuery("/admin/courses", {
           q: readText(query.q),

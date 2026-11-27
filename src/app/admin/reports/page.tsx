@@ -43,7 +43,7 @@ export default async function ReportsPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Reports" text="Completion" />
+      <DashboardBreadcrumb title="Reports" text="Reports" />
       <div className="card">
         <h6 className="mb-1 text-lg font-semibold">Completion</h6>
         <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-300">

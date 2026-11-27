@@ -7,7 +7,6 @@ import { pipeline } from "node:stream/promises";
 
 import Busboy from "busboy";
 
-import { MAX_COURSE_VIDEOS } from "@/lib/course-videos";
 import { courseTextSchema, videoDurationSchema } from "@/lib/validators";
 
 const STORED_FILE_NAME =
@@ -160,9 +159,6 @@ export async function writeVideoUpload(
 
   try {
     const parsed = await parseMultipart(request, contentType, root, temps, maxBytes);
-    if (parsed.files.length > MAX_COURSE_VIDEOS) {
-      throw new MediaError(400, `A course can have up to ${MAX_COURSE_VIDEOS} videos`);
-    }
     if (requireFile && parsed.files.length === 0) {
       throw new MediaError(400, "Use an mp4 or webm video");
     }
@@ -313,11 +309,8 @@ function parseMultipart(
         headers: { "content-type": contentType },
         defParamCharset: "utf8",
         limits: {
-          files: MAX_COURSE_VIDEOS + 1,
           ...(maxBytes !== undefined ? { fileSize: maxBytes + 1 } : {}),
-          fields: 48,
           fieldSize: 16 * 1024,
-          parts: 80,
         },
       });
     } catch {
@@ -369,7 +362,7 @@ function parseMultipart(
     });
 
     busboy.on("file", (name, stream, info) => {
-      if (name !== "video" || files.length >= MAX_COURSE_VIDEOS) {
+      if (name !== "video") {
         extraFile = true;
         stream.resume();
         return;
@@ -423,14 +416,7 @@ function parseMultipart(
         .then(() => {
           if (settled) return;
           if (extraFile) {
-            fail(
-              new MediaError(
-                400,
-                files.length >= MAX_COURSE_VIDEOS
-                  ? `A course can have up to ${MAX_COURSE_VIDEOS} videos`
-                  : "Use an mp4 or webm video",
-              ),
-            );
+            fail(new MediaError(400, "Use an mp4 or webm video"));
             return;
           }
           if (badType) {

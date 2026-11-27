@@ -61,7 +61,7 @@ export default async function TenantDetailPage({
 
   return (
     <>
-      <DashboardBreadcrumb text="Organization" backHref={backHref} />
+      <DashboardBreadcrumb page={tenant.name} text="Tenants" nav="super_admin" backHref={backHref} />
       <div className="card w-full !h-auto">
         <div className="grid items-start gap-6 xl:grid-cols-3">
           <section>

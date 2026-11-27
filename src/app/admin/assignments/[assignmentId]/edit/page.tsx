@@ -49,7 +49,7 @@ export default async function EditAssignmentPage({
     <>
       <DashboardBreadcrumb
         title="Edit assignment"
-        text="Assign"
+        text="Assignments"
         hint="Course, due date, people, and status are saved together."
         backHref={withListQuery("/admin/assignments", {
           staff: readObjectId(query.staff),

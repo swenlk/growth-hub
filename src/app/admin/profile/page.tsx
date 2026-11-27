@@ -28,7 +28,7 @@ export default async function AdminProfilePage() {
     <>
       <DashboardBreadcrumb
         title="Profile"
-        text="Account"
+        text="Profile"
         hint="Your sign-in name and email. Set a new password when you want one."
       />
       <div className="card mx-auto w-full max-w-md !h-auto">

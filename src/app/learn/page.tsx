@@ -16,7 +16,7 @@ export default async function LearnPage() {
 
   return (
     <>
-      <DashboardBreadcrumb title="My Trainings" text="Assigned" hint="In progress opens first. The other tabs load when you select them." />
+      <DashboardBreadcrumb title="My training" text="My training" nav="staff" hint="In progress opens first. The other tabs load when you select them." />
       <TrainingTabs />
     </>
   );

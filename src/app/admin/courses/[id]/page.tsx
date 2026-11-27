@@ -45,7 +45,7 @@ export default async function CourseDetailPage({
 
   return (
     <>
-      <DashboardBreadcrumb title={course.title} text="Course" backHref="/admin/courses" />
+      <DashboardBreadcrumb title={course.title} text="Courses" backHref="/admin/courses" />
       <div className="card mb-4 !h-auto">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

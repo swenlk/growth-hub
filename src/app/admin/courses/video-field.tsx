@@ -5,7 +5,6 @@ import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type Drag
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MAX_COURSE_VIDEOS } from "@/lib/course-videos";
 import { formatBytes, formatDuration } from "@/lib/format";
 
 export type PendingVideo = {
@@ -122,20 +121,9 @@ export function VideoField({
     event.target.value = "";
     if (selected.length === 0) return;
 
-    const room = MAX_COURSE_VIDEOS - strips.length;
-    if (room <= 0) {
-      onPickError(`A course can have up to ${MAX_COURSE_VIDEOS} videos`);
-      return;
-    }
-
     const accepted: VideoStrip[] = [];
     let rejected = false;
-    let capped = false;
     for (const file of selected) {
-      if (accepted.length >= room) {
-        capped = true;
-        break;
-      }
       if (!isAllowedVideo(file)) {
         rejected = true;
         continue;
@@ -143,8 +131,7 @@ export function VideoField({
       accepted.push({ kind: "pending", video: { key: crypto.randomUUID(), file, duration: null, error: null } });
     }
 
-    if (capped) onPickError(`A course can have up to ${MAX_COURSE_VIDEOS} videos`);
-    else if (rejected) onPickError("Use an mp4 or webm video");
+    if (rejected) onPickError("Use an mp4 or webm video");
     else onPickError(null);
 
     if (accepted.length > 0) setStrips((items) => [...items, ...accepted]);
@@ -189,7 +176,7 @@ export function VideoField({
         />
       </label>
       <p className="text-sm font-normal text-neutral-500 dark:text-neutral-300">
-        mp4 or webm. Up to {MAX_COURSE_VIDEOS} videos. Drag a strip to change the order.
+        mp4 or webm. Drag a strip to change the order.
       </p>
       {strips.length > 0 ? (
         <ul className="space-y-2">

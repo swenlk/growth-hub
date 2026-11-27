@@ -43,7 +43,8 @@ export default async function EditTenantPage({
     <>
       <DashboardBreadcrumb
         title="Edit organization"
-        text="Organizations"
+        text="Tenants"
+        nav="super_admin"
         backHref={withListQuery("/platform/tenants", {
           q: readText(query.q),
           status: readChoice(query.status, TENANT_STATUSES),

@@ -1,5 +1,3 @@
-export const MAX_COURSE_VIDEOS = 10;
-
 export type CourseVideoFile = {
   storedFileName: string;
   originalFileName: string;

@@ -64,7 +64,7 @@ export default async function StaffListPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Staff" text="Directory" hint="Search by name or email, then open a person to update them." />
+      <DashboardBreadcrumb title="Staff" text="Staff" hint="Search by name or email, then open a person to update them." />
       <div className="card flex flex-1 flex-col !h-auto">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <form method="get" className="flex flex-wrap items-center gap-3">

@@ -17,7 +17,7 @@ export default async function NewTenantPage() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Add organization" text="Organizations" backHref="/platform/tenants" />
+      <DashboardBreadcrumb title="Add organization" text="Tenants" nav="super_admin" backHref="/platform/tenants" />
       <div className="card mx-auto w-full max-w-md !h-auto">
         <TenantCreateForm action={createTenantAction} />
       </div>

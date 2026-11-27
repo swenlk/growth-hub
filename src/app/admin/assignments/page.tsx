@@ -69,7 +69,7 @@ export default async function AssignmentsPage({
 
   return (
     <>
-      <DashboardBreadcrumb title="Assignments" text="Assign" hint="See who has which course, and open a row to change it." />
+      <DashboardBreadcrumb title="Assignments" text="Assignments" hint="See who has which course, and open a row to change it." />
       <div className="card flex flex-1 flex-col !h-auto">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <form method="get" className="flex flex-wrap items-center gap-3">

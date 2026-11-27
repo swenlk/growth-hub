@@ -45,7 +45,7 @@ export default async function AdminHomePage() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Dashboard" text="Overview" hint="Open a number to work with that list." />
+      <DashboardBreadcrumb title="Dashboard" text="Dashboard" hint="Open a number to work with that list." />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {counts.map((card) => {
           const body = (
