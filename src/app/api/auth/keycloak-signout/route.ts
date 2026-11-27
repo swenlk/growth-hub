@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function appOrigin(): string {
-  const configured = process.env.AUTH_URL?.trim() || "http://localhost:3000";
+  const configured = process.env.AUTH_URL?.trim() || "http://localhost:3002";
   return configured.replace(/\/$/, "");
 }
 

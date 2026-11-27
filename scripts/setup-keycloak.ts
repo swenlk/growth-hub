@@ -567,11 +567,11 @@ async function main() {
     implicitFlowEnabled: false,
     directAccessGrantsEnabled: false,
     serviceAccountsEnabled: false,
-    redirectUris: ["http://localhost:3000/*"],
-    webOrigins: ["http://localhost:3000"],
+    redirectUris: ["http://localhost:3002/*"],
+    webOrigins: ["http://localhost:3002"],
     attributes: {
       "pkce.code.challenge.method": "S256",
-      "post.logout.redirect.uris": "http://localhost:3000/*",
+      "post.logout.redirect.uris": "http://localhost:3002/*",
     },
   });
 

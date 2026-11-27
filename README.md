@@ -76,11 +76,11 @@ docker compose up -d --build
 docker compose ps
 ```
 
-- App: http://localhost:3000
-- Health: http://localhost:3000/api/health
+- App: http://localhost:3002
+- Health: http://localhost:3002/api/health
 - Keycloak admin: http://localhost:8080/admin
 
-Create the first user in realm `growth-hub` with realm role `super_admin`, then sign in at http://localhost:3000/login.
+Create the first user in realm `growth-hub` with realm role `super_admin`, then sign in at http://localhost:3002/login.
 
 ## Later
 
@@ -108,8 +108,8 @@ Before the host is public:
 - Use real passwords for MySQL, `KEYCLOAK_ADMIN_PASSWORD`, and `AUTH_SECRET`.
 - Set `AUTH_URL=https://<app-host>` and `KEYCLOAK_ISSUER=https://<auth-host>/realms/growth-hub`.
 - In `docker-compose.yml`, change `KC_HOSTNAME` from `http://localhost:8080` to the public Keycloak origin, and change Keycloak `start-dev` to `start`.
-- In Keycloak, set the web client redirect URI, web origin, and post-logout URI to `https://<app-host>`, and require HTTPS. `npm run setup:keycloak` writes `http://localhost:3000` and `sslRequired=NONE` again, so do not re-run it until the script matches those public URLs.
-- Put TLS in front of ports 3000 and 8080.
+- In Keycloak, set the web client redirect URI, web origin, and post-logout URI to `https://<app-host>`, and require HTTPS. `npm run setup:keycloak` writes `http://localhost:3002` and `sslRequired=NONE` again, so do not re-run it until the script matches those public URLs.
+- Put TLS in front of ports 3002 and 8080.
 - Back up MySQL database `growth-hub`, MongoDB database `growth_hub`, and `./media`.
 
 ```powershell
