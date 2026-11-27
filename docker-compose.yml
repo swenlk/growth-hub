@@ -50,12 +50,13 @@ services:
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
       MEDIA_DIR: /app/media
+      PORT: "3002"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       keycloak:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "3002:3002"
     volumes:
       - ./media:/app/media
