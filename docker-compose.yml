@@ -1,7 +1,7 @@
 services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.2
-    command: start-dev
+    command: start
     environment:
       KC_DB: mysql
       KC_DB_URL: "jdbc:mysql://host.docker.internal:3306/${KC_DB_URL_DATABASE}?characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true"
