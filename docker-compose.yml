@@ -38,7 +38,9 @@ services:
   web:
     build: .
     environment:
-      MONGODB_URI: mongodb://host.docker.internal:27017/growth_hub
+      MONGODB_URI: mongodb://host.docker.internal:27017/
+      MONGODB_DATABASE: ${MONGODB_DATABASE}
+      TENANT_DB_PREFIX: ${TENANT_DB_PREFIX:-}
       AUTH_URL: ${AUTH_URL}
       AUTH_SECRET: ${AUTH_SECRET}
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}

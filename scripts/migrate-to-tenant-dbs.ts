@@ -221,7 +221,6 @@ async function main() {
   const sourceName = assertMigrationSource(
     sourceDatabaseName({
       explicit: args.source,
-      databaseEnv: process.env.MONGODB_DATABASE,
       uri: process.env.MONGODB_URI,
     }),
     platformDbName(),
