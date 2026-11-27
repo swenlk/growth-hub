@@ -21,7 +21,7 @@ function issuerOrigin(issuer: string): string {
   try {
     return new URL(issuer).origin;
   } catch {
-    return "http://localhost:8080";
+    return "http://localhost:8090";
   }
 }
 
@@ -36,7 +36,7 @@ function realmFromIssuer(issuer: string): string {
 
 /**
  * The browser and the token `iss` claim use KEYCLOAK_ISSUER (localhost).
- * The Next.js container must call KEYCLOAK_INTERNAL_URL (http://keycloak:8080).
+ * The Next.js container must call KEYCLOAK_INTERNAL_URL (http://keycloak:8090).
  * Discovery still advertises the public issuer; only the server-side fetch is rewritten.
  */
 function keycloakServerFetch(publicOrigin: string, internalBase: string): typeof fetch {
@@ -72,7 +72,7 @@ function decodeJwtPayload(jwt: string): Record<string, unknown> {
 }
 
 async function refreshKeycloakToken(refreshToken: string): Promise<TokenResponse> {
-  const issuer = requiredEnv("KEYCLOAK_ISSUER", "http://localhost:8080/realms/growth-hub");
+  const issuer = requiredEnv("KEYCLOAK_ISSUER", "http://localhost:8090/realms/growth-hub");
   const internalBase = requiredEnv("KEYCLOAK_INTERNAL_URL", issuerOrigin(issuer)).replace(/\/$/, "");
   const realm = realmFromIssuer(issuer);
   const body = new URLSearchParams({
@@ -98,7 +98,7 @@ async function refreshKeycloakToken(refreshToken: string): Promise<TokenResponse
   return (await response.json()) as TokenResponse;
 }
 
-const issuer = requiredEnv("KEYCLOAK_ISSUER", "http://localhost:8080/realms/growth-hub");
+const issuer = requiredEnv("KEYCLOAK_ISSUER", "http://localhost:8090/realms/growth-hub");
 const internalBase = requiredEnv("KEYCLOAK_INTERNAL_URL", issuerOrigin(issuer)).replace(/\/$/, "");
 const publicOrigin = issuerOrigin(issuer);
 

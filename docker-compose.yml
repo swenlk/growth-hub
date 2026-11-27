@@ -10,7 +10,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HTTP_ENABLED: "true"
-      KC_HTTP_PORT: "8080"
+      KC_HTTP_PORT: "8090"
       KC_HOSTNAME: ${KC_HOSTNAME}
       KC_HOSTNAME_STRICT: "false"
       KC_HEALTH_ENABLED: "true"
@@ -18,7 +18,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "8080:8080"
+      - "8090:8090"
     volumes:
       - ./keycloak/themes/growth-hub:/opt/keycloak/themes/growth-hub:ro
       - ./keycloak/providers/skip-update-password/target/skip-update-password-1.0.0.jar:/opt/keycloak/providers/skip-update-password.jar:ro
@@ -44,7 +44,7 @@ services:
       AUTH_URL: ${AUTH_URL}
       AUTH_SECRET: ${AUTH_SECRET}
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8090
       KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
       KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID}
